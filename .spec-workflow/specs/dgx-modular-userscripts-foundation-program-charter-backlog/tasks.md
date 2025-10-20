@@ -13,7 +13,7 @@
   - _Prompt: Role: Program Manager experienced in backlog curation | Task: Implement the task for spec dgx-modular-userscripts-foundation-program-charter-backlog, first run spec-workflow-guide to get the workflow guide then implement the task: create backlog grouped by the specified streams with concise value framing, highlight dependencies and recorder-first priorities | Restrictions: Keep items implementation-agnostic, reuse existing module names, avoid new terminology | _Leverage: project_overview.md | _Requirements: Requirement 2 — Feature Backlog & Milestones | Success: Backlog approved with all streams populated and dependencies clear._
   - Status: Completed — Backlog streams populated with value framing, dependencies, and recorder-first priorities.
 
-- [ ] 3. Define milestones and acceptance bar
+- [x] 3. Define milestones and acceptance bar
   - File: .spec-workflow/specs/dgx-modular-userscripts-foundation-program-charter-backlog/guide-milestones.md
   - Translate backlog into MVP/Post-MVP checklists and articulate project-wide acceptance bar criteria.
   - _Leverage: requirement acceptance criteria, steering success metrics_
