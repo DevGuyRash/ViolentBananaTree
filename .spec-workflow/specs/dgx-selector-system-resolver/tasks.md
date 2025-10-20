@@ -6,7 +6,7 @@
   - _Requirements: Requirement 1_
   - _Prompt: Implement the task for spec dgx-selector-system-resolver, first run spec-workflow-guide to get the workflow guide then implement the task: Role: TypeScript Schema Engineer specializing in runtime validation | Task: Define selector schema types and validation helpers ensuring ordered strategies (role/name/label/text → data attr/test id → CSS → XPath) with optional scopeKey support, updating `packages/selectors/types.ts` and creating `packages/selectors/schema.ts` per Requirement 1 | Restrictions: Do not introduce new third-party dependencies unless already in the repo, keep JSON parsing isolated, preserve existing selector map compatibility | _Leverage: `packages/core/utils/dom.ts`, `packages/selectors/oracle.json`, `packages/recorder/to-workflow.ts` | _Requirements: Requirement 1 | Success: Types compile without errors, validation rejects out-of-order strategies, schema loader exports typed helpers reusable by recorder and runtime | Instructions: Before coding set this task to [-] in tasks.md, and when finished set it to [x]._
 
-- [ ] 2. Implement resolver core orchestration
+- [x] 2. Implement resolver core orchestration
   - Files: `packages/core/resolve.ts`, `packages/core/index.ts`
   - Extend resolver to iterate strategies in priority order, respect scoped containers, and return structured results including attempts and resolved strategy metadata.
   - Purpose: Enable workflows to locate DOM elements deterministically and record which strategy succeeded.
