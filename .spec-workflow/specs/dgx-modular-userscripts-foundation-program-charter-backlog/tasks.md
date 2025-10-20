@@ -20,7 +20,7 @@
   - _Requirements: Requirement 2 — Feature Backlog & Milestones, Requirement 3 — Acceptance Bar & Open Questions_
   - _Prompt: Role: Release Manager focused on automation quality | Task: Implement the task for spec dgx-modular-userscripts-foundation-program-charter-backlog, first run spec-workflow-guide to get the workflow guide then implement the task: produce MVP and post-MVP milestones with feature checklists and define the cross-feature acceptance bar referencing steering constraints | Restrictions: Do not introduce new milestones beyond MVP/post-MVP, ensure alignment with success metrics | _Leverage: steering success metrics, requirements.md | _Requirements: Requirement 2 — Feature Backlog & Milestones, Requirement 3 — Acceptance Bar & Open Questions | Success: Milestones and acceptance bar approved with explicit checklists._
 
-- [ ] 4. Resolve open questions log
+- [x] 4. Resolve open questions log
   - File: .spec-workflow/specs/dgx-modular-userscripts-foundation-program-charter-backlog/guide-open-questions.md
   - Summarize outstanding decisions, proposed answers, owners, and next steps to keep spec actionable.
   - _Leverage: requirements.md (Decisions & Resolutions section)_
