@@ -14,7 +14,7 @@
   - _Requirements: Requirement 2, Requirement 4_
   - _Prompt: Implement the task for spec dgx-selector-system-resolver, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Browser Automation Engineer with expertise in DOM resolution | Task: Enhance `packages/core/resolve.ts` to consume SelectorMap entries, iterate strategies in order with scoped container support, and return structured results consumed by the workflow engine per Requirements 2 and 4 | Restrictions: Avoid duplicating DOM helpers, keep resolver side-effect free outside logging hooks, do not break existing exports from `packages/core/index.ts` | _Leverage: `packages/core/utils/dom.ts`, `packages/workflows/engine.ts`, `packages/core/debug.ts` | _Requirements: Requirement 2, Requirement 4 | Success: Resolver passes unit tests, logs resolve attempts, respects scopeKey fallback rules, and integrates with workflow engine without regressions | Instructions: Before coding set this task to [-] in tasks.md, and when finished set it to [x]._
 
-- [ ] 3. Add resolver telemetry hooks
+- [x] 3. Add resolver telemetry hooks
   - Files: `packages/core/resolve-telemetry.ts`, `packages/core/debug.ts`, `packages/menu/hud.ts`
   - Create telemetry helpers emitting success/miss data, stability scores, and tags for HUD/log consumption.
   - Purpose: Surface selector miss diagnostics and stability signals to observability layers.

@@ -5,6 +5,14 @@ import type {
 } from "../selectors/types";
 import { executeStrategy, type QueryRoot } from "./utils/dom";
 import * as debug from "./debug";
+import type { ResolverTelemetry } from "./resolve-telemetry";
+import {
+  buildAttemptEvent,
+  buildMissEvent,
+  buildSuccessEvent,
+  summarizeAttempt,
+  type ResolverAttemptSummary
+} from "./resolve-telemetry";
 
 export type ResolveAttempt = {
   strategy: SelectorTry;
@@ -29,6 +37,7 @@ export type ResolveResult = {
 export type ResolverOptions = {
   scopeRoot?: QueryRoot | null;
   logger?: typeof debug;
+  telemetry?: ResolverTelemetry | null;
 };
 
 type ResolverContext = {
@@ -79,17 +88,40 @@ function resolveScope(
 }
 
 function resolveAgainstStrategies(
+  key: string,
+  entry: SelectorEntry | undefined,
+  scopeKey: string | undefined,
   strategies: SelectorTry[],
   root: QueryRoot | undefined,
   logger: typeof debug | undefined,
-  key: string
-): { element: Element | null; attempts: ResolveAttempt[]; resolvedBy?: SelectorTry } {
+  telemetry: ResolverTelemetry | null | undefined
+): {
+  element: Element | null;
+  attempts: ResolveAttempt[];
+  resolvedBy?: SelectorTry;
+  summaries: ResolverAttemptSummary[];
+} {
   const attempts: ResolveAttempt[] = [];
+  const summaries: ResolverAttemptSummary[] = [];
 
-  for (const strategy of strategies) {
+  strategies.forEach((strategy, index) => {
     const elements = executeStrategy(strategy, root ?? undefined);
     const success = elements.length > 0;
     attempts.push({ strategy, success, elements });
+
+    const summary = summarizeAttempt(strategy, index, elements.length);
+    summaries.push(summary);
+
+    telemetry?.logAttempt(
+      buildAttemptEvent(
+        key,
+        scopeKey,
+        index + 1,
+        summary,
+        entry,
+        strategy
+      )
+    );
 
     logger?.debug?.("Resolver attempt", {
       key,
@@ -98,13 +130,24 @@ function resolveAgainstStrategies(
       count: elements.length
     });
 
-    if (success) {
-      const element = elements[0];
-      return { element, attempts, resolvedBy: strategy };
-    }
-  }
+    if (success && elements[0]) {
+      telemetry?.logSuccess(
+        buildSuccessEvent(
+          key,
+          scopeKey,
+          index + 1,
+          summary,
+          entry,
+          strategy
+        )
+      );
 
-  return { element: null, attempts };
+      const element = elements[0];
+      return { element, attempts, resolvedBy: strategy, summaries };
+    }
+  });
+
+  return { element: null, attempts, summaries };
 }
 
 function resolveSelectorInternal(
@@ -138,11 +181,14 @@ function resolveSelectorInternal(
   const scope = resolveScope(map, entry, options, context, key);
 
   const root = scope?.root ?? options.scopeRoot ?? undefined;
-  const { element, attempts, resolvedBy } = resolveAgainstStrategies(
+  const { element, attempts, resolvedBy, summaries } = resolveAgainstStrategies(
+    key,
+    entry,
+    scope?.key,
     entry.tries,
     root,
     options.logger,
-    key
+    options.telemetry
   );
 
   if (!element) {
@@ -152,6 +198,10 @@ function resolveSelectorInternal(
       scopeKey: scope?.key,
       scopeResolved: Boolean(scope?.root)
     });
+
+    options.telemetry?.logMiss(
+      buildMissEvent(key, scope?.key, summaries, entry)
+    );
   } else {
     options.logger?.info?.("Resolver success", {
       key,
