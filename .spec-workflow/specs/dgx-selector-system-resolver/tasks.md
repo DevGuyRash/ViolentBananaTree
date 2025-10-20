@@ -1,4 +1,4 @@
-- [ ] 1. Establish selector schema contracts
+- [x] 1. Establish selector schema contracts
   - Files: `packages/selectors/types.ts`, `packages/selectors/schema.ts`
   - Define TypeScript types for `SelectorMap`, `SelectorEntry`, `SelectorStrategy`, and runtime validation helpers enforcing ordered strategies and scoped roots.
   - Purpose: Provide a canonical schema so recorder exports and resolver consumers share a stable contract.
