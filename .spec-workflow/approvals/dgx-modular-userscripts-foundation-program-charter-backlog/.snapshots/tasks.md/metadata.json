@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/dgx-modular-userscripts-foundation-program-charter-backlog/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-10-20T03:43:19.508Z",
+      "trigger": "initial",
+      "approvalId": "approval_1760931799504_i25te4gda",
+      "approvalTitle": "Tasks — DGX Modular Userscripts Foundation — Program Charter & Backlog"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-10-20T03:43:48.980Z",
+      "trigger": "approved",
+      "approvalId": "approval_1760931799504_i25te4gda",
+      "approvalTitle": "Tasks — DGX Modular Userscripts Foundation — Program Charter & Backlog"
+    }
+  ]
+}
