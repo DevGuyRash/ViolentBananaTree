@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/dgx-modular-userscripts-foundation-program-charter-backlog/guide-charter.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-10-20T04:26:56.141Z",
+      "trigger": "initial",
+      "approvalId": "approval_1760934416138_of2dhgedb",
+      "approvalTitle": "dgx-modular-userscripts-foundation charter"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-10-20T04:44:58.047Z",
+      "trigger": "approved",
+      "approvalId": "approval_1760934416138_of2dhgedb",
+      "approvalTitle": "dgx-modular-userscripts-foundation charter"
+    }
+  ]
+}

@@ -1,16 +1,17 @@
-- [ ] 1. Draft charter narrative
+- [x] 1. Draft charter narrative
   - File: .spec-workflow/specs/dgx-modular-userscripts-foundation-program-charter-backlog/guide-charter.md
   - Capture vision, problem, personas, goals, non-goals, constraints, architecture, success metrics, risks, glossary using steering terminology.
   - _Leverage: project_overview.md, .spec-workflow/steering/product.md, .spec-workflow/steering/tech.md_
   - _Requirements: Requirement 1 — Charter_
   - _Prompt: Role: Product Strategist specializing in automation platforms | Task: Implement the charter narrative for spec dgx-modular-userscripts-foundation-program-charter-backlog, first run spec-workflow-guide to get the workflow guide then implement the task: capture vision, problem, goals, success metrics, non-goals, personas, constraints, high-level architecture, risks, and glossary aligned with steering docs | Restrictions: Keep language implementation-agnostic, reuse steering terminology, no new scope beyond overview | _Leverage: project_overview.md, steering/product.md, steering/tech.md | _Requirements: Requirement 1 — Charter | Success: Charter document approved with complete narrative and accurate terminology, risks mapped to mitigations._
 
-- [ ] 2. Build feature backlog by streams
+- [x] 2. Build feature backlog by streams
   - File: .spec-workflow/specs/dgx-modular-userscripts-foundation-program-charter-backlog/guide-backlog.md
   - Group backlog entries under Core, Workflows, UI/HUD, Selector System, Inspector, Recorder, Context Store, Scroll & Collect, Build & Tooling, Docs with value statements and dependencies.
   - _Leverage: project_overview.md, requirement acceptance criteria_
   - _Requirements: Requirement 2 — Feature Backlog & Milestones_
   - _Prompt: Role: Program Manager experienced in backlog curation | Task: Implement the task for spec dgx-modular-userscripts-foundation-program-charter-backlog, first run spec-workflow-guide to get the workflow guide then implement the task: create backlog grouped by the specified streams with concise value framing, highlight dependencies and recorder-first priorities | Restrictions: Keep items implementation-agnostic, reuse existing module names, avoid new terminology | _Leverage: project_overview.md | _Requirements: Requirement 2 — Feature Backlog & Milestones | Success: Backlog approved with all streams populated and dependencies clear._
+  - Status: Completed — Backlog streams populated with value framing, dependencies, and recorder-first priorities.
 
 - [ ] 3. Define milestones and acceptance bar
   - File: .spec-workflow/specs/dgx-modular-userscripts-foundation-program-charter-backlog/guide-milestones.md
