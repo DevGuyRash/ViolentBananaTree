@@ -1,6 +1,7 @@
 ## 1) Foundation Prompt (program charter & backlog)
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Prompt:**
 **Title:** DGX Modular Userscripts Foundation — Program Charter & Backlog
 Read `project_overview.md` and produce a concise **program charter** and **feature backlog** for the DGX project. Capture **vision**, **personas**, **goals**, **non‑goals**, **primary constraints** (userscript managers, grants, CSP, performance budgets), and **high‑level architecture**.
@@ -19,6 +20,7 @@ Deliver:
 ## 2) General Feature Spec Prompt (template)
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Prompt (template):**
 **Title:** DGX — Feature Spec: <FEATURE NAME>
 Using `project_overview.md` (and the steering docs Product.md, Tech.md, Structure.md if present), create a **feature specification** for **<FEATURE NAME>** in the **<STREAM/MODULE>** area.
@@ -38,6 +40,7 @@ Avoid implementation details; focus on **WHAT** the spec must cover and deliver.
 ```
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **How to use:** Replace <FEATURE NAME> and <STREAM/MODULE>. Paste into your spec agent.
 ```
 
@@ -50,6 +53,7 @@ Paste any of these as‑is; they already reflect your project’s language and c
 ### 3.1 Core — Selector System & Resolver
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Selector System & Resolver
 Produce a spec for a **SelectorMap JSON** per site with logical keys and ordered strategies (role/name/label/text → data attr/test id → CSS → XPath), plus a resolver that tries in order and logs misses. Include scoping to containers, tags/notes, stability scoring, and graceful degradation. Define outcomes, scope, constraints, dependencies, acceptance criteria, edge cases, observability, risks, and open questions based on `project_overview.md`.
 ```
@@ -57,6 +61,7 @@ Produce a spec for a **SelectorMap JSON** per site with logical keys and ordered
 ### 3.2 Core — Workflow Engine & DSL
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Workflow Engine & DSL
 Specify the declarative workflow model (step kinds like click, type, select, waits, conditionals, delay, setContext, assertions, foreach, logging, retry policy). Define how steps reference **logical keys** only, default timeouts/intervals, and error signaling. Include outcomes, scope, constraints, acceptance, and telemetry requirements as described in `project_overview.md`.
 ```
@@ -64,6 +69,7 @@ Specify the declarative workflow model (step kinds like click, type, select, wai
 ### 3.3 Utilities — Waiting & Loading
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Waiting & Loading Utilities
 Define spec for waits (waitFor by key/CSS/XPath/text, waitText, wait for visibility, mutation/idle windows). Cover timeouts, polling caps, debug logs, and failure messaging. Include constraints, dependencies (resolver), acceptance criteria, and edge cases (dynamic UIs, stale nodes).
 ```
@@ -71,6 +77,7 @@ Define spec for waits (waitFor by key/CSS/XPath/text, waitText, wait for visibil
 ### 3.4 Utilities — Scrolling & “Scroll Until …”
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Scroll Utilities & Scroll‑Until
 Specify scroll container detection, scrollIntoView behaviors, and `scrollUntil` options (end, element, list growth, predicate; step size, caps, delays, timeout). Define “no‑change” termination logic, acceptance criteria, and failure logs. Include interactions with Recorder and Selector System.
 ```
@@ -78,6 +85,7 @@ Specify scroll container detection, scrollIntoView behaviors, and `scrollUntil` 
 ### 3.5 Utilities — List Extraction
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: List Extraction
 Specify `collectList` high‑level behavior: parent & item targeting by logical keys or CSS, output modes (text, HTML, attrs), dedupe options, limits, and optional mapping to structured objects. Include acceptance criteria for correctness and robustness.
 ```
@@ -85,6 +93,7 @@ Specify `collectList` high‑level behavior: parent & item targeting by logical 
 ### 3.6 UI — HUD & Native Menu
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: HUD + Native Menu
 Describe the floating HUD/command palette plus mirrored Tampermonkey/Violentmonkey menu entries. Include page‑scoped commands, minimal settings modal, status indicators, hotkeys, and discoverability. Define constraints (CSP, styling via injected CSS), acceptance tests, and error states.
 ```
@@ -92,6 +101,7 @@ Describe the floating HUD/command palette plus mirrored Tampermonkey/Violentmonk
 ### 3.7 Data — Context Store (Cross‑Page/Tab)
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Context Store
 Define a shared state layer backed by GM storage and `BroadcastChannel` with get/set/delete/subscribe, optional TTL, and namespacing by page id. Include sync behavior across tabs, conflict handling, and acceptance criteria.
 ```
@@ -99,6 +109,7 @@ Define a shared state layer backed by GM storage and `BroadcastChannel` with get
 ### 3.8 UX — Visual Inspector (Overlay + Picker)
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Visual Inspector
 Specify an element highlight overlay with tooltip showing tag/id/classes, role/name/label, text snippet, data‑attrs, and suggested selector strategies with stability scores and uniqueness checks. Include keyboard navigation (ancestors/siblings), scoping to container keys, and constraints (no eval, clean teardown). Define acceptance criteria and observability.
 ```
@@ -106,6 +117,7 @@ Specify an element highlight overlay with tooltip showing tag/id/classes, role/n
 ### 3.9 UX — Recorder (Action Timeline → DSL + Selectors)
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Recorder
 Define recording of clicks, hovers, focus/blur, typing/paste (with masking option), selects, toggles, keypresses, and scrolls. Require mapping to logical keys, primary strategy selection with fallbacks, and export into page module workflows and selector JSON. Include privacy defaults, scroll container capture, acceptance criteria, and failure behaviors.
 ```
@@ -113,6 +125,7 @@ Define recording of clicks, hovers, focus/blur, typing/paste (with masking optio
 ### 3.10 Shell — Page Modules & Registry
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Page Modules & Registry
 Specify how a page module declares id/label/matches/selectors/workflows, and how the shell registers only active modules for the current URL. Include acceptance criteria for correct activation and command registration.
 ```
@@ -120,6 +133,7 @@ Specify how a page module declares id/label/matches/selectors/workflows, and how
 ### 3.11 Build — Userscript (Vite + vite‑plugin‑monkey)
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Userscript Build
 Define the userscript build target, dev server install URL, live reload expectations, and path aliases for packages. Include acceptance criteria for TM/VM compatibility and grants presence.
 ```
@@ -127,6 +141,7 @@ Define the userscript build target, dev server install URL, live reload expectat
 ### 3.12 Build — Optional MV3 Extension (WXT)
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: MV3 Extension (Optional)
 Specify the MV3 build that composes the same content logic as the userscript. Define content script injection constraints, parity expectations, and acceptance criteria (no refactors required to share code).
 ```
@@ -134,6 +149,7 @@ Specify the MV3 build that composes the same content logic as the userscript. De
 ### 3.13 Docs — Documentation Bundle
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Documentation Deliverables
 Scope the initial docs: README, AGENTS, CONTRIBUTING, RECORDER guide. Define what each must cover (install/build/run, adding pages/selectors, recorder use, troubleshooting), acceptance criteria for clarity and completeness.
 ```
@@ -141,6 +157,7 @@ Scope the initial docs: README, AGENTS, CONTRIBUTING, RECORDER guide. Define wha
 ### 3.14 Quality — Acceptance, Logging & Telemetry
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Acceptance, Logging & Telemetry
 Define project‑wide logging prefixing, event taxonomy (runs, step successes/failures, selector misses, timeouts), and acceptance checks per feature. Include minimal privacy‑respecting telemetry fields and opt‑out expectations.
 ```
@@ -148,6 +165,7 @@ Define project‑wide logging prefixing, event taxonomy (runs, step successes/fa
 ### 3.15 Safety — Security, Privacy, Accessibility
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Security, Privacy, Accessibility
 Formalize CSP expectations, no‑eval constraints, input masking defaults, data retention (client‑side), and a11y preferences (role/name/label first). Include acceptance criteria and risks.
 ```
@@ -155,6 +173,7 @@ Formalize CSP expectations, no‑eval constraints, input masking defaults, data 
 ### 3.16 Performance — Budgets & Timeouts
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Performance Budgets
 Define polling intervals, default timeouts, and ceiling caps per operation. Include performance acceptance gates and debug behavior on budget breaches.
 ```
@@ -166,6 +185,7 @@ Define polling intervals, default timeouts, and ceiling caps per operation. Incl
 ### 4.1 Change Request / Enhancement
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Change Spec: <TITLE>
 Produce a spec that explains the desired change, affected modules, rationale, scope and non‑goals, acceptance criteria, risks, and rollout impact. Reference `project_overview.md`.
 ```
@@ -173,6 +193,7 @@ Produce a spec that explains the desired change, affected modules, rationale, sc
 ### 4.2 Bug Fix
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Bug Spec: <SHORT SUMMARY>
 Produce a spec that summarizes symptoms, expected vs actual outcomes, suspected area, reproduction preconditions, acceptance criteria for the fix, side‑effects to watch, and any selectors/workflows at risk. Reference `project_overview.md`.
 ```
@@ -180,6 +201,7 @@ Produce a spec that summarizes symptoms, expected vs actual outcomes, suspected 
 ### 4.3 Documentation Task
 
 ```markdown
+Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Docs Spec: <DOC NAME>
 Produce a scoped docs plan (audience, objectives, must‑cover topics, examples needed, acceptance criteria for clarity/completeness, and cross‑links). Reference `project_overview.md`.
 ```
