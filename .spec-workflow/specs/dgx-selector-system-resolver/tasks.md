@@ -30,7 +30,7 @@
   - _Requirements: Requirement 1, Requirement 3_
   - _Prompt: Implement the task for spec dgx-selector-system-resolver, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Recorder Pipeline Engineer | Task: Build selector merge utilities that combine recorder suggestions with existing SelectorMap entries, preserving metadata order and updating scores per Requirements 1 and 3 | Restrictions: Do not mutate inputs in place; return new objects for recorder saves, maintain backward compatibility with existing exports | _Leverage: `packages/selectors/types.ts`, `packages/recorder/selector-suggest.ts`, `packages/selectors/schema.ts` | _Requirements: Requirement 1, Requirement 3 | Success: Recorder exports include stability scores, tags, and notes, duplicate strategies are deduplicated by type/value, and manual metadata remains intact | Instructions: Before coding set this task to [-] in tasks.md, and when finished set it to [x]._
 
-- [ ] 5. Update inspector and HUD displays for stability data
+- [x] 5. Update inspector and HUD displays for stability data
   - Files: `packages/inspector/overlay.ts`, `packages/menu/hud.ts`, `packages/menu/index.ts`
   - Surface stability scores, tags, and notes in inspector tooltips and HUD miss notifications, including graceful degradation messaging when strategies fail.
   - Purpose: Provide actionable feedback to authors when selectors degrade or miss targets.
