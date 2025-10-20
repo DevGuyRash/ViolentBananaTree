@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/dgx-selector-system-resolver/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-10-20T05:07:24.154Z",
+      "trigger": "initial",
+      "approvalId": "approval_1760936844151_s2uf5eibt",
+      "approvalTitle": "DGX Selector System & Resolver Tasks"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-10-20T05:07:44.828Z",
+      "trigger": "approved",
+      "approvalId": "approval_1760936844151_s2uf5eibt",
+      "approvalTitle": "DGX Selector System & Resolver Tasks"
+    }
+  ]
+}

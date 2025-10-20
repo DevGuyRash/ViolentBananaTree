@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/dgx-selector-system-resolver/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-10-20T05:06:08.804Z",
+      "trigger": "initial",
+      "approvalId": "approval_1760936768801_1w4s74c5k",
+      "approvalTitle": "DGX Selector System & Resolver Design"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-10-20T05:06:32.822Z",
+      "trigger": "approved",
+      "approvalId": "approval_1760936768801_1w4s74c5k",
+      "approvalTitle": "DGX Selector System & Resolver Design"
+    }
+  ]
+}
