@@ -22,7 +22,7 @@
   - _Requirements: Requirement 2, Requirement 3, Requirement 4_
   - _Prompt: Implement the task for spec dgx-selector-system-resolver, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Observability-focused JavaScript Engineer | Task: Introduce resolver telemetry utilities that log attempts, successes, and misses with stability metadata, wiring into HUD notifications per Requirements 2–4 | Restrictions: Use existing `[DGX]` logging conventions, ensure sensitive data is sanitized, avoid coupling HUD UI to resolver internals | _Leverage: `packages/core/debug.ts`, `packages/menu/hud.ts`, `packages/workflows/engine.ts` | _Requirements: Requirement 2, Requirement 3, Requirement 4 | Success: Telemetry helpers export typed interfaces, workflow engine receives callbacks for logging, HUD displays miss information without performance regressions | Instructions: Before coding set this task to [-] in tasks.md, and when finished set it to [x]._
 
-- [ ] 4. Enhance recorder selector merge pipeline
+- [x] 4. Enhance recorder selector merge pipeline
   - Files: `packages/recorder/selector-merge.ts`, `packages/recorder/to-workflow.ts`, `packages/recorder/session.ts`
   - Implement merge logic that preserves existing selector metadata while appending new strategies, scores, tags, and notes.
   - Purpose: Ensure recorder exports stay in sync with manual edits and capture stability diagnostics.
