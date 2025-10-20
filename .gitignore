@@ -1,3 +1,7 @@
+# Spec workflow
+session.json
+# .spec-workflow/templates/
+
 # Logs
 logs
 *.log
