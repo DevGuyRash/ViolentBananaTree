@@ -1,5 +1,7 @@
 ## 1) Foundation Prompt (program charter & backlog)
 
+Status: Done
+
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
 **Prompt:**
@@ -52,6 +54,8 @@ Paste any of these as‑is; they already reflect your project’s language and c
 
 ### 3.1 Core — Selector System & Resolver
 
+Status: In-Progress
+
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Selector System & Resolver
@@ -60,6 +64,8 @@ Produce a spec for a **SelectorMap JSON** per site with logical keys and ordered
 
 ### 3.2 Core — Workflow Engine & DSL
 
+Status: Waiting
+
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Workflow Engine & DSL
@@ -67,6 +73,8 @@ Specify the declarative workflow model (step kinds like click, type, select, wai
 ```
 
 ### 3.3 Utilities — Waiting & Loading
+
+Status: Waiting
 
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
@@ -84,6 +92,8 @@ Specify scroll container detection, scrollIntoView behaviors, and `scrollUntil` 
 
 ### 3.5 Utilities — List Extraction
 
+Status: Waiting
+
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: List Extraction
@@ -91,6 +101,8 @@ Specify `collectList` high‑level behavior: parent & item targeting by logical 
 ```
 
 ### 3.6 UI — HUD & Native Menu
+
+Status: Waiting
 
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
@@ -100,6 +112,8 @@ Describe the floating HUD/command palette plus mirrored Tampermonkey/Violentmonk
 
 ### 3.7 Data — Context Store (Cross‑Page/Tab)
 
+Status: Waiting
+
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Context Store
@@ -107,6 +121,8 @@ Define a shared state layer backed by GM storage and `BroadcastChannel` with get
 ```
 
 ### 3.8 UX — Visual Inspector (Overlay + Picker)
+
+Status: Waiting
 
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
@@ -116,6 +132,8 @@ Specify an element highlight overlay with tooltip showing tag/id/classes, role/n
 
 ### 3.9 UX — Recorder (Action Timeline → DSL + Selectors)
 
+Status: Waiting
+
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Recorder
@@ -123,6 +141,8 @@ Define recording of clicks, hovers, focus/blur, typing/paste (with masking optio
 ```
 
 ### 3.10 Shell — Page Modules & Registry
+
+Status: Waiting
 
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
@@ -132,6 +152,8 @@ Specify how a page module declares id/label/matches/selectors/workflows, and how
 
 ### 3.11 Build — Userscript (Vite + vite‑plugin‑monkey)
 
+Status: Waiting
+
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Userscript Build
@@ -139,6 +161,8 @@ Define the userscript build target, dev server install URL, live reload expectat
 ```
 
 ### 3.12 Build — Optional MV3 Extension (WXT)
+
+Status: Waiting
 
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
@@ -148,6 +172,8 @@ Specify the MV3 build that composes the same content logic as the userscript. De
 
 ### 3.13 Docs — Documentation Bundle
 
+Status: Waiting
+
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Documentation Deliverables
@@ -155,6 +181,8 @@ Scope the initial docs: README, AGENTS, CONTRIBUTING, RECORDER guide. Define wha
 ```
 
 ### 3.14 Quality — Acceptance, Logging & Telemetry
+
+Status: Waiting
 
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
@@ -164,6 +192,8 @@ Define project‑wide logging prefixing, event taxonomy (runs, step successes/fa
 
 ### 3.15 Safety — Security, Privacy, Accessibility
 
+Status: Waiting
+
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
 **Title:** DGX — Feature Spec: Security, Privacy, Accessibility
@@ -171,6 +201,8 @@ Formalize CSP expectations, no‑eval constraints, input masking defaults, data 
 ```
 
 ### 3.16 Performance — Budgets & Timeouts
+
+Status: Waiting
 
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
