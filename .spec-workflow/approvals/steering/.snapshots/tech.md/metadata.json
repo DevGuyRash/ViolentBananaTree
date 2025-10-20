@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/steering/tech.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-10-20T03:03:04.480Z",
+      "trigger": "initial",
+      "approvalId": "approval_1760929384478_gllqy6z22",
+      "approvalTitle": "DGX steering tech doc"
+    }
+  ]
+}
