@@ -54,7 +54,7 @@
   - _Requirements: Requirement 1, Requirement 2, Requirement 4_
   - _Prompt: Implement the task for spec dgx-selector-system-resolver, first run spec-workflow-guide to get the workflow guide then implement the task: Role: QA Automation Engineer for TypeScript projects | Task: Write unit and integration tests covering schema validation, resolver success/miss flows, and workflow retry integration per Requirements 1, 2, and 4 | Restrictions: Use existing testing frameworks configured in the repo, avoid brittle DOM mocks, ensure tests run deterministically in CI | _Leverage: `packages/selectors/schema.ts`, `packages/core/resolve.ts`, `packages/workflows/engine.ts` | _Requirements: Requirement 1, Requirement 2, Requirement 4 | Success: Tests fail on schema order violations, detect resolver logging regressions, and confirm workflow retries respect resolver output | Instructions: Before coding set this task to [-] in tasks.md, and when finished set it to [x]._
 
-- [ ] 8. Document selector map usage in recorder onboarding flow
+- [x] 8. Document selector map usage in recorder onboarding flow
   - Files: `packages/recorder/onboarding.ts`, `packages/recorder/session.ts`
   - Update in-recorder guidance/tooltips to explain stability scores, scope keys, and graceful degradation behavior without modifying external docs.
   - Purpose: Teach authors how to interpret the new selector metadata while staying within product UX.
