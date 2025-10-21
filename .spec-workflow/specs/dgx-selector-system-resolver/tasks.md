@@ -38,7 +38,7 @@
   - _Requirements: Requirement 3, Requirement 4_
   - _Prompt: Implement the task for spec dgx-selector-system-resolver, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Frontend Engineer focused on UX diagnostics | Task: Enhance inspector overlays and HUD notifications to display stability scores, tags, and graceful degradation messaging sourced from resolver telemetry per Requirements 3 and 4 | Restrictions: Keep overlay performance responsive, reuse existing HUD styling conventions, ensure masked data remains redacted | _Leverage: `packages/recorder/selector-suggest.ts`, `packages/core/resolve-telemetry.ts`, `packages/menu/hud.ts` | _Requirements: Requirement 3, Requirement 4 | Success: Tooltip/HUD updates render without layout issues, data matches resolver output, and miss events clearly indicate diagnostics | Instructions: Before coding set this task to [-] in tasks.md, and when finished set it to [x]._
 
-- [ ] 6. Integrate resolver with workflow engine retries
+- [x] 6. Integrate resolver with workflow engine retries
   - Files: `packages/workflows/engine.ts`, `packages/workflows/types.ts`, `packages/core/resolve.ts`
   - Wire resolver results into step execution, logging miss events, and respecting retry/backoff policies without losing context.
   - Purpose: Ensure workflows degrade gracefully and expose selector failures as actionable errors.
@@ -46,7 +46,7 @@
   - _Requirements: Requirement 2, Requirement 4_
   - _Prompt: Implement the task for spec dgx-selector-system-resolver, first run spec-workflow-guide to get the workflow guide then implement the task: Role: Workflow Runtime Engineer | Task: Update workflow engine execution path to consume resolver results, emit miss telemetry, and honor retry/backoff policies while preserving context data per Requirements 2 and 4 | Restrictions: Maintain existing step API signatures, ensure backward compatibility with existing workflows, avoid increasing default timeout intervals | _Leverage: `packages/workflows/engine.ts`, `packages/core/resolve-telemetry.ts`, `packages/core/utils/wait.ts` | _Requirements: Requirement 2, Requirement 4 | Success: Workflow steps log resolved strategy, retries trigger correctly, miss events do not wipe context state, and unit/integration tests cover success/miss scenarios | Instructions: Before coding set this task to [-] in tasks.md, and when finished set it to [x]._
 
-- [ ] 7. Create unit and integration tests for schema and resolver
+- [x] 7. Create unit and integration tests for schema and resolver
   - Files: `packages/selectors/__tests__/schema.test.ts`, `packages/core/__tests__/resolve.test.ts`, `packages/workflows/__tests__/engine-resolver.integration.test.ts`
   - Author tests covering schema validation edge cases, resolver success/miss paths, and workflow integration with retries.
   - Purpose: Guard against regressions in selector resolution and telemetry behavior.
