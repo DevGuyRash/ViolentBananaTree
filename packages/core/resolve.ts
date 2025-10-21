@@ -104,7 +104,8 @@ function resolveAgainstStrategies(
   const attempts: ResolveAttempt[] = [];
   const summaries: ResolverAttemptSummary[] = [];
 
-  strategies.forEach((strategy, index) => {
+  for (let index = 0; index < strategies.length; index += 1) {
+    const strategy = strategies[index];
     const elements = executeStrategy(strategy, root ?? undefined);
     const success = elements.length > 0;
     attempts.push({ strategy, success, elements });
@@ -145,7 +146,7 @@ function resolveAgainstStrategies(
       const element = elements[0];
       return { element, attempts, resolvedBy: strategy, summaries };
     }
-  });
+  }
 
   return { element: null, attempts, summaries };
 }
