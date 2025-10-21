@@ -71,8 +71,12 @@ export class WorkflowStepExecutionError extends Error {
 }
 
 export class WorkflowResolverMissError extends Error {
-  constructor(public readonly step: WorkflowStep, public readonly result: ResolveResult) {
-    super(`Resolver miss for key "${step.key ?? ""}" in step "${step.kind}"`);
+  constructor(
+    public readonly step: WorkflowStep,
+    public readonly result: ResolveResult,
+    public readonly logicalKey?: string
+  ) {
+    super(`Resolver miss for key "${logicalKey ?? ""}" in step "${step.kind}"`);
     this.name = "WorkflowResolverMissError";
   }
 }
@@ -94,6 +98,10 @@ type RuntimeEnvironment = {
     hooks?: WorkflowRuntimeHooks;
   };
 };
+
+function stepHasLogicalKey(step: WorkflowStep): step is WorkflowStep & { key: string } {
+  return typeof (step as { key?: unknown }).key === "string" && (step as { key: string }).key.length > 0;
+}
 
 export async function runWorkflow(
   definition: WorkflowDefinition,
@@ -136,11 +144,12 @@ async function executeStep(step: WorkflowStep, runtime: RuntimeEnvironment): Pro
 
   let lastError: unknown = null;
   let lastResult: ResolveResult | null = null;
+  const stepWithKey = stepHasLogicalKey(step) ? step : null;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const retriesRemaining = maxAttempts - attempt;
-    const resolveResult = step.key
-      ? await resolveWithLogging(step, runtime, attempt)
+    const resolveResult = stepWithKey
+      ? await resolveWithLogging(stepWithKey, runtime, attempt)
       : null;
 
     lastResult = resolveResult;
@@ -153,8 +162,8 @@ async function executeStep(step: WorkflowStep, runtime: RuntimeEnvironment): Pro
       resolveResult
     };
 
-    if (step.key && resolveResult && !resolveResult.element) {
-      lastError = new WorkflowResolverMissError(step, resolveResult);
+    if (stepWithKey && resolveResult && !resolveResult.element) {
+      lastError = new WorkflowResolverMissError(step, resolveResult, stepWithKey.key);
 
       runtime.options.hooks?.onError?.(lastError, executionArgs);
 
@@ -207,12 +216,12 @@ async function executeStep(step: WorkflowStep, runtime: RuntimeEnvironment): Pro
 }
 
 async function resolveWithLogging(
-  step: WorkflowStep,
+  step: WorkflowStep & { key: string },
   runtime: RuntimeEnvironment,
   attempt: number
 ): Promise<ResolveResult> {
   const result = await Promise.resolve(
-    runtime.options.resolve(runtime.options.selectorMap, step.key as string, {
+    runtime.options.resolve(runtime.options.selectorMap, step.key, {
       telemetry: runtime.options.telemetry,
       logger: runtime.options.logger
     })
