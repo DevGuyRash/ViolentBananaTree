@@ -28,6 +28,27 @@ export type HudNotification = {
   metadata?: Record<string, unknown>;
 };
 
+export type HudTerminologyKey =
+  | "hud.stabilityScoreLabel"
+  | "hud.scopeKeyLabel"
+  | "hud.gracefulDegradationLabel";
+
+export type HudTerminology = {
+  stabilityScoreLabel: string;
+  scopeKeyLabel: string;
+  gracefulDegradationLabel: string;
+};
+
+export type HudLocalize = (key: HudTerminologyKey, fallback: string) => string;
+
+const DEFAULT_TERMINOLOGY: Record<HudTerminologyKey, string> = {
+  "hud.stabilityScoreLabel": "Stability score",
+  "hud.scopeKeyLabel": "Scope key",
+  "hud.gracefulDegradationLabel": "Graceful degradation"
+};
+
+const DEFAULT_LOCALIZE: HudLocalize = (_key, fallback) => fallback;
+
 type HudEmitter = {
   notify: (notification: HudNotification) => void;
 };
@@ -59,4 +80,31 @@ export function composeHudDescription(primary: string, degradation?: string): st
   }
 
   return `${degradationTrimmed}\n${primaryTrimmed}`;
+}
+
+export function resolveHudTerminology(localize: HudLocalize = DEFAULT_LOCALIZE): HudTerminology {
+  return {
+    stabilityScoreLabel: localize(
+      "hud.stabilityScoreLabel",
+      DEFAULT_TERMINOLOGY["hud.stabilityScoreLabel"]
+    ),
+    scopeKeyLabel: localize("hud.scopeKeyLabel", DEFAULT_TERMINOLOGY["hud.scopeKeyLabel"]),
+    gracefulDegradationLabel: localize(
+      "hud.gracefulDegradationLabel",
+      DEFAULT_TERMINOLOGY["hud.gracefulDegradationLabel"]
+    )
+  };
+}
+
+export function formatHudStabilityScore(
+  score: number | undefined,
+  options: { emptyLabel?: string } = {}
+): string {
+  if (typeof score !== "number" || Number.isNaN(score)) {
+    return options.emptyLabel ?? "N/A";
+  }
+
+  const normalized = Math.max(0, Math.min(1, score));
+  const percent = Math.round(normalized * 100);
+  return `${percent}%`;
 }
