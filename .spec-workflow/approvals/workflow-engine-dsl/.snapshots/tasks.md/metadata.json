@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/dgx-workflow-engine-dsl/tasks.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-10-21T04:17:30.430Z",
+      "trigger": "initial",
+      "approvalId": "approval_1761020250426_wog9s260v",
+      "approvalTitle": "workflow-engine-dsl tasks approval"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-10-21T04:17:40.072Z",
+      "trigger": "approved",
+      "approvalId": "approval_1761020250426_wog9s260v",
+      "approvalTitle": "workflow-engine-dsl tasks approval"
+    }
+  ]
+}

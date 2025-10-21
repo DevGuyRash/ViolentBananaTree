@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/dgx-workflow-engine-dsl/requirements.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-10-21T03:38:33.455Z",
+      "trigger": "initial",
+      "approvalId": "approval_1761017913450_o10uk4niq",
+      "approvalTitle": "workflow-engine-dsl requirements approval"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-10-21T04:01:32.052Z",
+      "trigger": "approved",
+      "approvalId": "approval_1761017913450_o10uk4niq",
+      "approvalTitle": "workflow-engine-dsl requirements approval"
+    }
+  ]
+}

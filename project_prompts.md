@@ -54,7 +54,7 @@ Paste any of these as‑is; they already reflect your project’s language and c
 
 ### 3.1 Core — Selector System & Resolver
 
-Status: In-Progress
+Status: Done
 
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
@@ -64,7 +64,7 @@ Produce a spec for a **SelectorMap JSON** per site with logical keys and ordered
 
 ### 3.2 Core — Workflow Engine & DSL
 
-Status: Waiting
+Status: In-Progress
 
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
