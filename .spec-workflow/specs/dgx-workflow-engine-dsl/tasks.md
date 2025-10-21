@@ -1,6 +1,6 @@
 # Tasks Document
 
-- [ ] 1. Define workflow DSL types and validators in `packages/workflows/src/types.ts`
+- [x] 1. Define workflow DSL types and validators in `packages/workflows/src/types.ts`
   - File: packages/workflows/src/types.ts
   - Codify `Step`, `WorkflowDefinition`, `Condition`, `Assertion`, telemetry payloads, and runtime guards covering all step kinds (click, type, select, waitFor, waitText, delay, setContext, foreach, if, log, capture, collectList, scrollUntil, run, retry policy, etc.). Ensure logical key references are enforced via types and runtime assertions.
   - _Leverage: packages/workflows/src/index.ts, packages/recorder/src/to-workflow.ts_
