@@ -1,5 +1,10 @@
 import { resolveSelector } from "../resolve";
-import type { ResolverTelemetry } from "../resolve-telemetry";
+import type {
+  ResolverTelemetry,
+  ResolverAttemptEvent,
+  ResolverMissEvent,
+  ResolverSuccessEvent
+} from "../resolve-telemetry";
 import type { SelectorMap } from "../../selectors/types";
 
 type AsyncTest = () => void | Promise<void>;
@@ -58,9 +63,9 @@ function withFakeDocument<T>(queryResults: (selector: string) => Element[], run:
 }
 
 function createTelemetryTracker() {
-  const attempts: unknown[] = [];
-  const successes: unknown[] = [];
-  const misses: unknown[] = [];
+  const attempts: ResolverAttemptEvent[] = [];
+  const successes: ResolverSuccessEvent[] = [];
+  const misses: ResolverMissEvent[] = [];
 
   const telemetry: ResolverTelemetry = {
     logAttempt(event) {
