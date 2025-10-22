@@ -14,18 +14,12 @@ import {
   type WorkflowRunOutcome,
   type WorkflowStep,
   type StepErrorPayload,
-  type StepTelemetryEvent
+  type StepTelemetryEvent,
+  type WorkflowRuntimeLogger
 } from "../types";
 import { StepError } from "./errors";
 
 export type WorkflowRunStatus = "pending" | "running" | "success" | "failed" | "cancelled";
-
-export interface WorkflowRuntimeLogger {
-  debug?(message: string, data?: Record<string, unknown>): void;
-  info?(message: string, data?: Record<string, unknown>): void;
-  warn?(message: string, data?: Record<string, unknown>): void;
-  error?(message: string, data?: Record<string, unknown>): void;
-}
 
 export interface WorkflowRunTelemetryEvent {
   runId: string;

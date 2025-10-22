@@ -120,6 +120,37 @@ export type LogStep = StepMetadata & {
   data?: Record<string, unknown>;
 };
 
+export type StepResultStatus = "success" | "skipped";
+
+export interface StepContextUpdate {
+  path: ContextPath;
+  value: unknown;
+  ttlMs?: number;
+  mask?: boolean;
+}
+
+export interface StepLogEntry {
+  level: LogLevel;
+  message: string;
+  data?: Record<string, unknown>;
+  masked?: boolean;
+}
+
+export interface StepResult {
+  status: StepResultStatus;
+  notes?: string;
+  contextUpdates?: StepContextUpdate[];
+  logs?: StepLogEntry[];
+  data?: Record<string, unknown>;
+}
+
+export interface WorkflowRuntimeLogger {
+  debug?(message: string, data?: Record<string, unknown>): void;
+  info?(message: string, data?: Record<string, unknown>): void;
+  warn?(message: string, data?: Record<string, unknown>): void;
+  error?(message: string, data?: Record<string, unknown>): void;
+}
+
 export type Assertion =
   | { kind: "exists"; key: LogicalKey }
   | { kind: "notExists"; key: LogicalKey }
@@ -383,11 +414,16 @@ export interface WorkflowStepExecutionArgs {
   retriesRemaining: number;
   context: WorkflowContext;
   resolveResult: ResolveResult | null;
+  runId: string;
+  workflowId: string;
+  logger?: WorkflowRuntimeLogger;
+  signal: AbortSignal;
+  resolveLogicalKey: (key: string) => Promise<ResolveResult>;
 }
 
 export type WorkflowStepHandler = (
   args: WorkflowStepExecutionArgs
-) => Promise<void> | void;
+) => Promise<StepResult | void> | StepResult | void;
 
 export type WorkflowHandlers = Record<string, WorkflowStepHandler>;
 

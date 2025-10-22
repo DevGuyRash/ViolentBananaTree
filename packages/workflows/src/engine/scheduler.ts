@@ -6,9 +6,14 @@ import {
   type IfStep,
   type RetryPolicy,
   type RetryStep,
+  type StepContextUpdate,
+  type StepLogEntry,
+  type StepResult,
+  type StepResultStatus,
   type StepTelemetryEvent,
   type WorkflowDefinition,
   type WorkflowHandlers,
+  type WorkflowRuntimeLogger,
   type WorkflowStep,
   type WorkflowStepExecutionArgs
 } from "../types";
@@ -21,6 +26,7 @@ import {
 } from "./errors";
 import { createContextManager, type WorkflowContextManager } from "./context";
 import type {
+  WorkflowResolverRequest,
   WorkflowScheduler,
   WorkflowSchedulerEnvironment,
   WorkflowSchedulerResult
@@ -190,16 +196,26 @@ async function executeAtomicStep(step: WorkflowStep, context: StepExecutionConte
         });
       }
 
-      await executeHandlerWithTimeout(step, handler, resolved, attempt, maxAttempts - attempt, config.timeoutMs, env);
+      const handlerResult = await executeHandlerWithTimeout(
+        step,
+        handler,
+        resolved,
+        attempt,
+        maxAttempts - attempt,
+        config.timeoutMs,
+        env
+      );
 
       const duration = Date.now() - attemptStartedAt;
+      const applied = applyStepResult(handlerResult, env, state);
       state.completedSteps += 1;
       env.metadata.completedSteps = state.completedSteps;
       emitTelemetryEvent(env, step, context, {
-        status: "success",
+        status: applied.status === "skipped" ? "skipped" : "success",
         attempt,
         durationMs: duration,
-        logicalKey
+        logicalKey,
+        notes: applied.notes
       });
       return;
     } catch (error) {
@@ -352,20 +368,25 @@ async function executeHandlerWithTimeout(
   retriesRemaining: number,
   timeoutMs: number,
   env: WorkflowSchedulerEnvironment
-): Promise<void> {
+): Promise<StepResult | void> {
   const args: WorkflowStepExecutionArgs = {
     step,
     attempt,
     retriesRemaining,
     context: env.context,
-    resolveResult
+    resolveResult,
+    runId: env.runId,
+    workflowId: env.definition.id,
+    logger: env.logger,
+    signal: env.signal,
+    resolveLogicalKey: (key: string) =>
+      env.resolver.resolve(createResolverRequest(key, step, env, attempt))
   };
 
   const execution = Promise.resolve().then(() => handler(args));
 
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
-    await execution;
-    return;
+    return execution;
   }
 
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -377,12 +398,77 @@ async function executeHandlerWithTimeout(
   });
 
   try {
-    await Promise.race([execution, timeout]);
+    return await Promise.race([execution, timeout]);
   } finally {
     if (typeof timer !== "undefined") {
       clearTimeout(timer);
     }
   }
+}
+
+function applyStepResult(
+  result: StepResult | void,
+  env: WorkflowSchedulerEnvironment,
+  state: SchedulerState
+): { status: StepResultStatus; notes?: string } {
+  if (!result) {
+    return { status: "success" } satisfies { status: StepResultStatus; notes?: string };
+  }
+
+  const status: StepResultStatus = result.status ?? "success";
+
+  if (Array.isArray(result.contextUpdates) && result.contextUpdates.length > 0) {
+    applyContextUpdates(state, result.contextUpdates);
+  }
+
+  if (Array.isArray(result.logs) && result.logs.length > 0) {
+    emitResultLogs(env.logger, result.logs);
+  }
+
+  return { status, notes: result.notes } satisfies { status: StepResultStatus; notes?: string };
+}
+
+function applyContextUpdates(state: SchedulerState, updates: StepContextUpdate[]): void {
+  updates.forEach((update) => {
+    if (typeof update?.path !== "string" || update.path.length === 0) {
+      return;
+    }
+
+    state.contextManager.set(update.path, update.value, typeof update.ttlMs === "number" ? { ttlMs: update.ttlMs } : undefined);
+  });
+}
+
+function emitResultLogs(logger: WorkflowRuntimeLogger | undefined, logs: StepLogEntry[]): void {
+  if (!logger) {
+    return;
+  }
+
+  logs.forEach((entry) => {
+    const method = logger[entry.level];
+
+    if (typeof method === "function") {
+      method(entry.message, entry.data);
+    }
+  });
+}
+
+function createResolverRequest(
+  key: string,
+  step: WorkflowStep,
+  env: WorkflowSchedulerEnvironment,
+  attempt: number
+): WorkflowResolverRequest {
+  const resolverStep = { ...step, key } as WorkflowStep & { key: string };
+
+  return {
+    runId: env.runId,
+    workflowId: env.definition.id,
+    step: resolverStep,
+    attempt,
+    signal: env.signal,
+    context: env.context,
+    logger: env.logger
+  } satisfies WorkflowResolverRequest;
 }
 
 async function resolveLogicalKeyIfNeeded(
