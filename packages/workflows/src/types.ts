@@ -282,6 +282,7 @@ export interface WorkflowDefaults {
   intervalMs?: number;
   retries?: number;
   backoffMs?: number;
+  maxBackoffMs?: number;
   jitterMs?: number;
 }
 
@@ -297,7 +298,7 @@ export interface WorkflowDefinition {
 }
 
 export interface StepErrorPayload {
-  reason: "resolver-miss" | "timeout" | "assertion-failed" | "context-miss" | "unknown";
+  reason: "resolver-miss" | "timeout" | "assertion-failed" | "context-miss" | "unknown" | "cancelled";
   message: string;
   stepId?: string;
   stepKind?: WorkflowStepKind;

@@ -10,7 +10,7 @@
     "resolveJsonModule": true,
     "allowJs": false,
     "baseUrl": ".",
-    "types": []
+    "types": ["node"]
   },
   "include": ["packages/**/*.ts", "packages/**/*.json"],
   "exclude": ["node_modules"]
