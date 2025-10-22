@@ -21,7 +21,7 @@
   - _Requirements: 1.1, 2.1, 2.3, 4.1_
   - _Prompt: Role: Frontend Automation Engineer specializing in DOM interaction utilities | Task: Implement per-step action executors mapping DSL definitions to DOM operations, ensuring logical key usage, sanitizer integration, and telemetry-friendly responses per requirements 1.1, 2.1, 2.3, 4.1 | Restrictions: Keep each file under 200 lines, reuse shared helpers for resolving keys and handling timeouts, do not log sensitive data directly | Success: Executors perform expected DOM actions, mask sensitive captures, integrate with resolver/context, and return `StepResult` objects consumed by the engine_
 
-- [ ] 4. Add telemetry adapter in `packages/workflows/src/telemetry.ts`
+- [x] 4. Add telemetry adapter in `packages/workflows/src/telemetry.ts`
   - File: packages/workflows/src/telemetry.ts
   - Provide APIs to record step lifecycle events, format `[DGX]` console output, stream updates to HUD, and buffer metadata for recorder playback.
   - _Leverage: packages/menu/src/hud.ts, packages/recorder/src/session.ts, packages/core/src/utils/sanitize.ts_
