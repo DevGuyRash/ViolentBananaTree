@@ -14,7 +14,7 @@
   - _Requirements: 2.1, 2.2, 2.3, 3.1_
   - _Prompt: Role: Workflow Runtime Engineer with expertise in asynchronous orchestration | Task: Build the workflow engine executor honoring default intervals/timeouts, retry policies, conditionals, foreach loops, and nested workflow calls per requirements 2.1–3.1, wiring telemetry hooks and logical key resolution | Restrictions: Maintain single responsibility per helper, do not access DOM utilities directly (delegate to action executors), ensure all errors propagate as structured `StepError` objects | _Leverage: packages/core/src/utils/wait.ts, packages/core/src/resolve.ts, packages/context/src/store.ts, packages/workflows/src/config.ts | _Requirements: 2.1, 2.2, 2.3, 3.1 | Success: Engine runs provided workflows end-to-end, applies defaults when unspecified, retries obey exponential backoff, telemetry emits correct lifecycle events_
 
-- [ ] 3. Create action executors in `packages/workflows/src/actions/*.ts`
+- [x] 3. Create action executors in `packages/workflows/src/actions/*.ts`
   - Files: packages/workflows/src/actions/click.ts, type.ts, select.ts, waitFor.ts, waitText.ts, delay.ts, log.ts, setContext.ts, capture.ts, assert.ts, foreach.ts, run.ts, scrollUntil.ts, collectList.ts, hover.ts, focus.ts, blur.ts, retry.ts
   - Implement discrete executors that resolve logical keys, call core utilities, enforce sanitization (capture/log), and return structured results for telemetry. Share base helper for timeout handling.
   - _Leverage: packages/core/src/utils/dom.ts, packages/core/src/utils/scroll.ts, packages/core/src/utils/collect.ts, packages/core/src/resolve.ts, packages/context/src/store.ts, packages/workflows/src/types.ts_
