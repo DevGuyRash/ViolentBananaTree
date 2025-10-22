@@ -27,3 +27,4 @@ export {
   type WorkflowContextScope,
   type ContextSetOptions
 } from "./engine/context";
+export { createActionHandlers, type CreateActionHandlersOptions } from "./actions";
