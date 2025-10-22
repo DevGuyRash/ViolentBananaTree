@@ -18,8 +18,14 @@ export {
   type WorkflowTelemetryAdapterOptions,
   type StepEventListener,
   type RunEventListener,
-  type RunEventPhase
+  type RunEventPhase,
+  type WorkflowTelemetryObserver
 } from "./telemetry/runtime";
+export {
+  WorkflowEventRecorder,
+  type WorkflowTimeline,
+  type WorkflowTimelineEvent
+} from "./telemetry/recorder";
 export {
   createContextManager,
   getContextManager,

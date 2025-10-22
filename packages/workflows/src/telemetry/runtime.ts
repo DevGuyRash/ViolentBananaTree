@@ -4,6 +4,10 @@ import {
   type WorkflowRunTelemetryEvent
 } from "../engine/runtime";
 import {
+  SENSITIVE_KEY_PATTERN,
+  maskValue
+} from "../actions/shared";
+import {
   type StepErrorPayload,
   type StepTelemetryEvent
 } from "../types";
@@ -12,16 +16,22 @@ export type StepEventListener = (events: ReadonlyArray<StepTelemetryEvent>) => v
 export type RunEventPhase = "started" | "completed" | "cancelled";
 export type RunEventListener = (event: WorkflowRunTelemetryEvent, phase: RunEventPhase) => void;
 
+export interface WorkflowTelemetryObserver {
+  onRun?(event: WorkflowRunTelemetryEvent, phase: RunEventPhase): void;
+  onSteps?(events: ReadonlyArray<StepTelemetryEvent>): void;
+  onFlush?(runId: string): Promise<void> | void;
+}
+
 export interface WorkflowTelemetryAdapterOptions {
   stepListeners?: StepEventListener[];
   runListeners?: RunEventListener[];
   sanitize?: (value: unknown) => unknown;
   batchIntervalMs?: number;
   onFlush?: (runId: string) => Promise<void> | void;
+  observers?: WorkflowTelemetryObserver[];
 }
 
 const DEFAULT_BATCH_INTERVAL_MS = 16;
-const SENSITIVE_KEY_PATTERN = /(password|secret|token|auth|cookie|session|key)/i;
 
 export class WorkflowTelemetryAdapter implements WorkflowRuntimeTelemetry {
   #stepBuffer: StepTelemetryEvent[] = [];
@@ -32,6 +42,7 @@ export class WorkflowTelemetryAdapter implements WorkflowRuntimeTelemetry {
   #rafHandle: number | null = null;
   #timeoutHandle: ReturnType<typeof setTimeout> | null = null;
   #onFlush?: (runId: string) => Promise<void> | void;
+  #observers = new Set<WorkflowTelemetryObserver>();
 
   constructor(options: WorkflowTelemetryAdapterOptions = {}) {
     this.#batchInterval = Math.max(1, options.batchIntervalMs ?? DEFAULT_BATCH_INTERVAL_MS);
@@ -44,6 +55,10 @@ export class WorkflowTelemetryAdapter implements WorkflowRuntimeTelemetry {
 
     options.runListeners?.forEach((listener) => {
       this.onRun(listener);
+    });
+
+    options.observers?.forEach((observer) => {
+      this.addObserver(observer);
     });
   }
 
@@ -61,10 +76,18 @@ export class WorkflowTelemetryAdapter implements WorkflowRuntimeTelemetry {
     };
   }
 
+  addObserver(observer: WorkflowTelemetryObserver): () => void {
+    this.#observers.add(observer);
+    return () => {
+      this.#observers.delete(observer);
+    };
+  }
+
   runStarted(event: WorkflowRunTelemetryEvent): void {
     const sanitized = sanitizeRunEvent(event, this.#sanitize);
     coreLogger.info("Workflow run started", sanitized);
     this.#emitRun(sanitized, "started");
+    this.#notifyRun(sanitized, "started");
   }
 
   runCompleted(event: WorkflowRunTelemetryEvent): void {
@@ -72,6 +95,7 @@ export class WorkflowTelemetryAdapter implements WorkflowRuntimeTelemetry {
     const sanitized = sanitizeRunEvent(event, this.#sanitize);
     coreLogger.info("Workflow run completed", sanitized);
     this.#emitRun(sanitized, "completed");
+    this.#notifyRun(sanitized, "completed");
   }
 
   runCancelled(event: WorkflowRunTelemetryEvent): void {
@@ -79,10 +103,12 @@ export class WorkflowTelemetryAdapter implements WorkflowRuntimeTelemetry {
     const sanitized = sanitizeRunEvent(event, this.#sanitize);
     coreLogger.warn("Workflow run cancelled", sanitized);
     this.#emitRun(sanitized, "cancelled");
+    this.#notifyRun(sanitized, "cancelled");
   }
 
   stepEvent(event: StepTelemetryEvent): void {
     const sanitized = sanitizeStepEvent(event, this.#sanitize);
+    this.#logStepEvent(sanitized);
     this.#stepBuffer.push(sanitized);
     this.#scheduleStepFlush();
   }
@@ -93,6 +119,8 @@ export class WorkflowTelemetryAdapter implements WorkflowRuntimeTelemetry {
     if (this.#onFlush) {
       await this.#onFlush(runId);
     }
+
+    await this.#notifyFlush(runId);
   }
 
   #emitRun(event: WorkflowRunTelemetryEvent, phase: RunEventPhase): void {
@@ -105,6 +133,23 @@ export class WorkflowTelemetryAdapter implements WorkflowRuntimeTelemetry {
         listener(event, phase);
       } catch (error) {
         coreLogger.debug("Workflow telemetry run listener error", {
+          phase,
+          error: serializeError(error)
+        });
+      }
+    }
+  }
+
+  #notifyRun(event: WorkflowRunTelemetryEvent, phase: RunEventPhase): void {
+    if (this.#observers.size === 0) {
+      return;
+    }
+
+    for (const observer of this.#observers) {
+      try {
+        observer.onRun?.(event, phase);
+      } catch (error) {
+        coreLogger.debug("Workflow telemetry observer run error", {
           phase,
           error: serializeError(error)
         });
@@ -156,6 +201,8 @@ export class WorkflowTelemetryAdapter implements WorkflowRuntimeTelemetry {
       last: events[events.length - 1]
     });
 
+    this.#notifySteps(events);
+
     if (this.#stepListeners.size === 0) {
       return;
     }
@@ -168,6 +215,73 @@ export class WorkflowTelemetryAdapter implements WorkflowRuntimeTelemetry {
           error: serializeError(error)
         });
       }
+    }
+  }
+
+  #notifySteps(events: ReadonlyArray<StepTelemetryEvent>): void {
+    if (events.length === 0 || this.#observers.size === 0) {
+      return;
+    }
+
+    for (const observer of this.#observers) {
+      try {
+        observer.onSteps?.(events);
+      } catch (error) {
+        coreLogger.debug("Workflow telemetry observer step error", {
+          error: serializeError(error)
+        });
+      }
+    }
+  }
+
+  async #notifyFlush(runId: string): Promise<void> {
+    if (this.#observers.size === 0) {
+      return;
+    }
+
+    const pending: Promise<void>[] = [];
+
+    for (const observer of this.#observers) {
+      if (!observer.onFlush) {
+        continue;
+      }
+
+      try {
+        const result = observer.onFlush(runId);
+        if (result instanceof Promise) {
+          pending.push(
+            result.catch((error) => {
+              coreLogger.debug("Workflow telemetry observer flush error", {
+                error: serializeError(error)
+              });
+            })
+          );
+        }
+      } catch (error) {
+        coreLogger.debug("Workflow telemetry observer flush error", {
+          error: serializeError(error)
+        });
+      }
+    }
+
+    if (pending.length > 0) {
+      await Promise.all(pending);
+    }
+  }
+
+  #logStepEvent(event: StepTelemetryEvent): void {
+    switch (event.status) {
+      case "attempt":
+        coreLogger.info("Workflow step attempt", event);
+        return;
+      case "success":
+        coreLogger.info("Workflow step success", event);
+        return;
+      case "failure":
+        coreLogger.warn("Workflow step failure", event);
+        return;
+      default:
+        return;
     }
   }
 }
@@ -233,22 +347,6 @@ function sanitizeData(value: unknown, sanitize?: (value: unknown) => unknown): u
   }
 
   return value;
-}
-
-function maskValue(value: unknown): string {
-  if (typeof value === "string" && value.length <= 4) {
-    return "****";
-  }
-
-  if (typeof value === "number") {
-    return "****";
-  }
-
-  if (value === null || typeof value === "undefined") {
-    return "****";
-  }
-
-  return "********";
 }
 
 function serializeError(error: unknown): Record<string, unknown> {
