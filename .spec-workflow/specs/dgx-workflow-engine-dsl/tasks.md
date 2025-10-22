@@ -7,7 +7,7 @@
   - _Requirements: 1.1, 1.2, 1.3_
   - _Prompt: Role: TypeScript Architect specializing in strongly typed DSLs | Task: Implement comprehensive workflow DSL types and runtime validators so recorder exports and manual authorship cover all required step kinds and logical key contracts specified in requirements 1.1–1.3 | Restrictions: Do not introduce new external dependencies, keep runtime guards tree-shakeable, align type names with existing recorder exports | _Leverage: packages/workflows/src/index.ts, packages/recorder/src/to-workflow.ts | _Requirements: 1.1, 1.2, 1.3 | Success: TypeScript types compile without errors, runtime guard rejects invalid step shapes, recorder output type-checks against the DSL_
 
-- [ ] 2. Implement workflow engine runner in `packages/workflows/src/engine.ts`
+- [x] 2. Implement workflow engine runner in `packages/workflows/src/engine.ts`
   - File: packages/workflows/src/engine.ts
   - Execute workflow steps sequentially with support for nested workflows, retries, default timeouts/intervals, context injection, and telemetry emission. Integrate resolver and context store through dependency injection.
   - _Leverage: packages/core/src/utils/wait.ts, packages/core/src/resolve.ts, packages/context/src/store.ts, packages/workflows/src/config.ts_
