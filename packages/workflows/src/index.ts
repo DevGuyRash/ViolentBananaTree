@@ -27,6 +27,14 @@ export {
   type WorkflowTimelineEvent
 } from "./telemetry/recorder";
 export {
+  createWorkflowTelemetry,
+  createHudTelemetryObserver,
+  sanitizeTelemetryValue,
+  type WorkflowTelemetryBridge,
+  type WorkflowTelemetrySetupOptions,
+  type WorkflowHudTelemetryOptions
+} from "./telemetry";
+export {
   createContextManager,
   getContextManager,
   type WorkflowContextManager,
