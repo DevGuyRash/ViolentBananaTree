@@ -37,6 +37,10 @@ export interface WorkflowTelemetryBridge {
   dispose(): void;
 }
 
+/**
+ * Builds the workflow telemetry bridge so logical-key events surface to HUD/recorder
+ * while respecting scoped module defaults outlined in requirements 1.1 and 5.1.
+ */
 export function createWorkflowTelemetry(options: WorkflowTelemetrySetupOptions = {}): WorkflowTelemetryBridge {
   const recorder = resolveRecorder(options.recorder);
   const hudObserver = resolveHudObserver(options.hud);
@@ -118,6 +122,10 @@ function filterObservers(observers: Array<WorkflowTelemetryObserver | undefined>
   return observers.filter((observer): observer is WorkflowTelemetryObserver => Boolean(observer));
 }
 
+/**
+ * Creates a HUD observer that emits `[DGX]` run updates without leaking
+ * cross-module state, reinforcing requirement 5.1 boundaries.
+ */
 export function createHudTelemetryObserver(options: WorkflowHudTelemetryOptions = {}): WorkflowTelemetryObserver {
   const notify = options.notify ?? pushHudNotification;
   const includeAttempts = options.includeAttempts ?? true;
@@ -239,6 +247,10 @@ function safeNotify(notify: (notification: HudNotification) => void, notificatio
   }
 }
 
+/**
+ * Masks sensitive telemetry fields so logical-key traces remain reviewable
+ * per requirement 1.1 without exposing raw page defaults.
+ */
 export function sanitizeTelemetryValue(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map((entry) => sanitizeTelemetryValue(entry));

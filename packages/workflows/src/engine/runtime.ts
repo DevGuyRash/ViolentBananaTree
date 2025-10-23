@@ -128,6 +128,10 @@ const defaultLogger: WorkflowRuntimeLogger = {
   error: coreLogger.error
 };
 
+/**
+ * Executes a workflow definition using injected handlers so logical-key steps
+ * honor the DSL contract (requirement 1.1) and merge module defaults safely (requirement 5.1).
+ */
 export async function runWorkflow(
   definition: WorkflowDefinition,
   options: WorkflowRuntimeOptions
@@ -251,6 +255,10 @@ export async function runWorkflow(
   };
 }
 
+/**
+ * Requests cancellation for an active run while preserving requirement 5.1 metadata
+ * so page modules can safely rollback context without mutating other workflows.
+ */
 export function cancelRun(runId: string): boolean {
   const active = activeRuns.get(runId);
 
@@ -285,6 +293,10 @@ export function cancelRun(runId: string): boolean {
   return true;
 }
 
+/**
+ * Returns a cloned snapshot of run metadata for HUD and recorder observers,
+ * keeping logical-key traces intact for requirement 1.1 audits.
+ */
 export function getRunMetadata(runId: string): WorkflowRunMetadata | undefined {
   const record = runRecords.get(runId);
 

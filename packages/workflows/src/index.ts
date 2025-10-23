@@ -1,3 +1,7 @@
+/**
+ * Workflow DSL entry point exposing logical-key types and runtime factories
+ * so page modules merge defaults safely per requirements 1.1 and 5.1.
+ */
 export * from "./types";
 export * from "./config";
 export { runWorkflow, cancelRun, getRunMetadata, type WorkflowRuntimeOptions } from "./engine/runtime";

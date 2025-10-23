@@ -49,7 +49,7 @@
   - _Requirements: 4.1, 4.2_
   - _Prompt: Role: Frontend QA Automation Engineer | Task: Build integration tests validating telemetry->HUD flow per requirements 4.1–4.2 using mocked HUD adapters | Restrictions: Avoid real DOM rendering, ensure telemetry adapter remains decoupled, mock time to assert durations | Success: Tests confirm HUD receives correct events, statuses, and masked values_
 
-- [ ] 8. Document developer entry points via inline JSDoc
+- [x] 8. Document developer entry points via inline JSDoc
   - Files: packages/workflows/src/index.ts, engine.ts, telemetry.ts
   - Add concise JSDoc explaining engine configuration, telemetry hooks, and DSL usage for AI contributors.
   - _Leverage: AGENTS.md, existing JSDoc style_
