@@ -42,7 +42,7 @@
   - _Requirements: 2.1, 2.2, 3.1, 4.1_
   - _Prompt: Role: QA Engineer specializing in TypeScript testing | Task: Write focused unit tests covering DSL validation, engine behavior, and representative action executors per requirements 2.1–4.1 | Restrictions: Use existing test harness utilities, avoid full DOM reliance where mocks suffice, ensure deterministic timing by mocking wait utilities | Success: Tests cover key control flow scenarios, guard against regressions, and pass in CI_
 
-- [ ] 7. Create integration smoke tests for HUD timeline updates
+- [x] 7. Create integration smoke tests for HUD timeline updates
   - File: packages/workflows/src/__tests__/integration/hud-telemetry.test.ts
   - Simulate workflow runs with mocked HUD adapter verifying timeline entries, masking, and status transitions.
   - _Leverage: packages/menu/src/hud.ts, packages/workflows/src/telemetry.ts, tests/helpers/hudMock.ts_
