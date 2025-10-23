@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/waiting-loading-utilities/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-10-23T00:40:00.000Z",
+      "trigger": "approved",
+      "approvalId": "approval_1761487200000_waiting_loading_tasks",
+      "approvalTitle": "waiting-loading-utilities tasks approval"
+    }
+  ]
+}

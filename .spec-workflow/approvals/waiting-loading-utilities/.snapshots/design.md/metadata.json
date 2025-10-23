@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/waiting-loading-utilities/design.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-10-23T00:35:00.000Z",
+      "trigger": "approved",
+      "approvalId": "approval_1761486900000_waiting_loading_design",
+      "approvalTitle": "waiting-loading-utilities design approval"
+    }
+  ]
+}
