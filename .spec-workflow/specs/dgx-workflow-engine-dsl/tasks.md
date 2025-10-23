@@ -28,14 +28,14 @@
   - _Requirements: 4.1, 4.2, 4.3_
   - _Prompt: Role: Observability Engineer focused on client-side telemetry | Task: Implement telemetry adapter capturing workflow start/attempt/success/failure events with masked payloads and forwarding them to HUD and recorder per requirements 4.1–4.3 | Restrictions: Use existing sanitize utilities for sensitive data, ensure adapter is optional/injectable, avoid tight coupling to HUD internals | Success: Telemetry logs appear with `[DGX]` prefix, HUD receives structured updates, recorder can replay events for auditing_
 
-- [ ] 5. Establish workflow registry hooks in `packages/scripts/index.ts`
+- [x] 5. Establish workflow registry hooks in `packages/scripts/index.ts`
   - File: packages/scripts/index.ts (modify existing)
   - Register workflow engine factory, inject shared defaults, and expose telemetry hooks to HUD/recorder. Ensure page modules declare workflow metadata consistent with the new DSL.
   - _Leverage: packages/scripts/index.ts, packages/workflows/src/index.ts, packages/menu/src/hud.ts_
   - _Requirements: 5.1, 5.2_
   - _Prompt: Role: Integration Engineer bridging runtime modules | Task: Update script shell to instantiate workflow engine with resolver, context store, telemetry per requirements 5.1–5.2, expose commands to HUD, and ensure recorder exports attach defaults | Restrictions: Preserve existing module registration patterns, do not introduce circular dependencies, keep initialization idempotent | Success: HUD lists workflows from page modules, runs invoke the new engine, telemetry is visible, recorder exports remain compatible_
 
-- [ ] 6. Author unit tests for DSL and engine
+- [x] 6. Author unit tests for DSL and engine
   - Files: packages/workflows/src/__tests__/types.test.ts, engine.test.ts, actions/*.test.ts
   - Add Jest/ts-jest tests verifying type guards, engine retry behavior, conditional branching, foreach loops, and telemetry payloads.
   - _Leverage: packages/workflows/src/types.ts, packages/workflows/src/engine.ts, tests/helpers/domFixtures.ts_
