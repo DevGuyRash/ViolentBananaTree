@@ -64,7 +64,7 @@ Produce a spec for a **SelectorMap JSON** per site with logical keys and ordered
 
 ### 3.2 Core — Workflow Engine & DSL
 
-Status: In-Progress
+Status: Done
 
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
@@ -74,7 +74,7 @@ Specify the declarative workflow model (step kinds like click, type, select, wai
 
 ### 3.3 Utilities — Waiting & Loading
 
-Status: Waiting
+Status: In-Progress
 
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
