@@ -37,6 +37,8 @@ export type WorkflowEngineOptions = {
   defaultRetries?: number;
   backoff?: BackoffOptions;
   hooks?: WorkflowRuntimeHooks;
+  runId?: string;
+  signal?: AbortSignal;
 };
 
 export type WorkflowRunResult = {
@@ -87,6 +89,7 @@ type StepAttemptOutcome = {
 };
 
 type RuntimeEnvironment = {
+  controller: AbortController;
   options: Required<Pick<WorkflowEngineOptions, "selectorMap" | "handlers">> & {
     context: WorkflowContext;
     telemetry: ResolverTelemetry;
@@ -96,6 +99,9 @@ type RuntimeEnvironment = {
     defaultRetries: number;
     backoff: Required<Pick<BackoffOptions, "initialDelayMs" | "maxDelayMs" | "factor" | "jitterMs">>;
     hooks?: WorkflowRuntimeHooks;
+    runId: string;
+    workflowId: string;
+    signal: AbortSignal;
   };
 };
 
@@ -107,7 +113,7 @@ export async function runWorkflow(
   definition: WorkflowDefinition,
   engineOptions: WorkflowEngineOptions
 ): Promise<WorkflowRunResult> {
-  const runtime = createRuntimeEnvironment(engineOptions);
+  const runtime = createRuntimeEnvironment(definition, engineOptions);
   const completedSteps: WorkflowStep[] = [];
 
   try {
@@ -159,7 +165,18 @@ async function executeStep(step: WorkflowStep, runtime: RuntimeEnvironment): Pro
       attempt,
       retriesRemaining,
       context: runtime.options.context,
-      resolveResult
+      resolveResult,
+      runId: runtime.options.runId,
+      workflowId: runtime.options.workflowId,
+      logger: runtime.options.logger,
+      signal: runtime.options.signal,
+      resolveLogicalKey: (key: string) =>
+        Promise.resolve(
+          runtime.options.resolve(runtime.options.selectorMap, key, {
+            telemetry: runtime.options.telemetry,
+            logger: runtime.options.logger
+          })
+        )
     };
 
     if (stepWithKey && resolveResult && !resolveResult.element) {
@@ -265,8 +282,13 @@ function buildBackoffOptions(
   };
 }
 
-function createRuntimeEnvironment(options: WorkflowEngineOptions): RuntimeEnvironment {
+function createRuntimeEnvironment(
+  definition: WorkflowDefinition,
+  options: WorkflowEngineOptions
+): RuntimeEnvironment {
+  const controller = new AbortController();
   return {
+    controller,
     options: {
       selectorMap: options.selectorMap,
       handlers: options.handlers,
@@ -282,7 +304,10 @@ function createRuntimeEnvironment(options: WorkflowEngineOptions): RuntimeEnviro
         factor: options.backoff?.factor ?? DEFAULT_BACKOFF.factor,
         jitterMs: options.backoff?.jitterMs ?? DEFAULT_BACKOFF.jitterMs
       },
-      hooks: options.hooks
+      hooks: options.hooks,
+      runId: options.runId ?? `workflow-run-${Date.now()}`,
+      workflowId: definition.id,
+      signal: options.signal ?? controller.signal
     }
   };
 }

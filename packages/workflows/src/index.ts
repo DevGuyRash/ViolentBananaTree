@@ -5,13 +5,8 @@
 export * from "./types";
 export * from "./config";
 export { runWorkflow, cancelRun, getRunMetadata, type WorkflowRuntimeOptions } from "./engine/runtime";
-export {
-  DefaultWorkflowScheduler,
-  createDefaultScheduler,
-  type WorkflowScheduler,
-  type WorkflowSchedulerEnvironment,
-  type WorkflowSchedulerResult
-} from "./engine/scheduler";
+export { DefaultWorkflowScheduler, createDefaultScheduler } from "./engine/scheduler";
+export type { WorkflowScheduler, WorkflowSchedulerEnvironment, WorkflowSchedulerResult } from "./engine/runtime";
 export {
   WorkflowResolverBridge,
   createWorkflowResolverBridge,
