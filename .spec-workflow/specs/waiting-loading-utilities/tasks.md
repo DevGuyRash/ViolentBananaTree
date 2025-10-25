@@ -18,7 +18,7 @@
   - _Requirements: 1, 4_
   - _Prompt: Role: Senior TypeScript engineer experienced in async orchestration | Task: Build WaitScheduler coordinating logical key resolution, polling, and timeout caps per requirements 1 and 4 | Restrictions: No setInterval leaks (use clearable handles), respect default ≤150ms polling and ≤8000ms timeouts, attach strategy history to results | Success: Scheduler resolves elements with metadata, obeys caps, emits structured telemetry hooks_
 
-- [ ] 3. Build predicate evaluation modules
+- [x] 3. Build predicate evaluation modules
   - File: packages/core/utils/wait/predicates/text.ts & visibility.ts (new)
   - Implement text, regex, contains, and visibility calculations consuming resolved nodes and producing predicate snapshots
   - Purpose: Encapsulate predicate logic reused by wait helpers and recorder diagnostics
