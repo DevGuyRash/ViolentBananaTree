@@ -7,7 +7,7 @@ import {
   type ActionExecutionArgs,
   type ActionRuntimeOptions
 } from "./shared";
-import type { ScrollUntilOptions, ScrollUntilStep, WorkflowStepHandler } from "../types";
+import type { ScrollUntilOptions, ScrollUntilStep, StepResult, WorkflowStepHandler } from "../types";
 
 async function resolveContainer(options: ScrollUntilOptions, args: ActionExecutionArgs<ScrollUntilStep>) {
   if (options.containerKey) {
@@ -61,7 +61,10 @@ async function conditionMet(options: ScrollUntilOptions, args: ActionExecutionAr
   }
 }
 
-async function executeScrollUntil(args: ActionExecutionArgs<ScrollUntilStep>) {
+async function executeScrollUntil(
+  args: ActionExecutionArgs<ScrollUntilStep>,
+  _runtime: ActionRuntimeOptions
+): Promise<StepResult> {
   const { step, signal } = args;
   const container = await resolveContainer(step.options, args);
 
@@ -107,5 +110,5 @@ async function executeScrollUntil(args: ActionExecutionArgs<ScrollUntilStep>) {
 }
 
 export function createScrollUntilHandler(options: ActionRuntimeOptions = {}): WorkflowStepHandler {
-  return buildHandler((args) => executeScrollUntil(args), options);
+  return buildHandler<ScrollUntilStep>((args, runtime) => executeScrollUntil(args, runtime), options);
 }

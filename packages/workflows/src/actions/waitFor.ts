@@ -10,7 +10,7 @@ import {
   type ActionExecutionArgs,
   type ActionRuntimeOptions
 } from "./shared";
-import type { WaitForStep, WorkflowStepHandler } from "../types";
+import type { StepResult, WaitForStep, WorkflowStepHandler } from "../types";
 
 function queryByXpath(expression: string, root: Document | Element | null): Element | null {
   if (!root) {
@@ -49,7 +49,10 @@ function evaluateCondition(step: WaitForStep, root: Document | Element | null, e
   return false;
 }
 
-async function executeWaitFor(args: ActionExecutionArgs<WaitForStep>, runtime: ActionRuntimeOptions) {
+async function executeWaitFor(
+  args: ActionExecutionArgs<WaitForStep>,
+  runtime: ActionRuntimeOptions
+): Promise<StepResult> {
   const { step, resolveResult, signal } = args;
   const templateOptions = withEnvironment(args, runtime.environment);
   const documentRoot = resolveResult?.element?.ownerDocument ?? globalThis.document ?? null;
@@ -140,5 +143,5 @@ async function executeWaitFor(args: ActionExecutionArgs<WaitForStep>, runtime: A
 }
 
 export function createWaitForHandler(options: ActionRuntimeOptions = {}): WorkflowStepHandler {
-  return buildHandler((args, runtime) => executeWaitFor(args, runtime), options);
+  return buildHandler<WaitForStep>((args, runtime) => executeWaitFor(args, runtime), options);
 }

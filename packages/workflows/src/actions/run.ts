@@ -2,7 +2,10 @@ import { StepError } from "../engine/errors";
 import { buildHandler, buildResult, type ActionExecutionArgs, type ActionRuntimeOptions } from "./shared";
 import type { RunStep, WorkflowStepHandler } from "../types";
 
-async function executeRun(args: ActionExecutionArgs<RunStep>) {
+async function executeRun(
+  args: ActionExecutionArgs<RunStep>,
+  _runtime: ActionRuntimeOptions
+): Promise<never> {
   throw new StepError({
     reason: "unknown",
     message: `Nested workflow execution not yet implemented for '${args.step.workflowId}'`,
@@ -12,5 +15,5 @@ async function executeRun(args: ActionExecutionArgs<RunStep>) {
 }
 
 export function createRunHandler(options: ActionRuntimeOptions = {}): WorkflowStepHandler {
-  return buildHandler((args) => executeRun(args), options);
+  return buildHandler<RunStep>(executeRun, options);
 }

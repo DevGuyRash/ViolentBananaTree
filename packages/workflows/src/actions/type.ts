@@ -12,7 +12,7 @@ import {
   type ActionExecutionArgs,
   type ActionRuntimeOptions
 } from "./shared";
-import type { TypeStep, WorkflowStepHandler } from "../types";
+import type { StepResult, TypeStep, WorkflowStepHandler } from "../types";
 
 function resolveTypeValue(args: ActionExecutionArgs<TypeStep>, runtime: ActionRuntimeOptions): { value: string } {
   const { step } = args;
@@ -66,7 +66,10 @@ function applyTextToElement(element: HTMLElement, value: string, clearFirst?: bo
   });
 }
 
-async function executeType(args: ActionExecutionArgs<TypeStep>, runtime: ActionRuntimeOptions) {
+async function executeType(
+  args: ActionExecutionArgs<TypeStep>,
+  runtime: ActionRuntimeOptions
+): Promise<StepResult> {
   const { step, resolveResult, signal } = args;
   const element = resolveResult?.element ?? null;
 
@@ -109,5 +112,5 @@ async function executeType(args: ActionExecutionArgs<TypeStep>, runtime: ActionR
 }
 
 export function createTypeHandler(options: ActionRuntimeOptions = {}): WorkflowStepHandler {
-  return buildHandler((args, runtime) => executeType(args, runtime), options);
+  return buildHandler<TypeStep>((args, runtime) => executeType(args, runtime), options);
 }

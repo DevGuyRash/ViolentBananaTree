@@ -9,7 +9,7 @@ import {
   type ActionExecutionArgs,
   type ActionRuntimeOptions
 } from "./shared";
-import type { CollectListOptions, CollectListStep, WorkflowStepHandler } from "../types";
+import type { CollectListOptions, CollectListStep, StepResult, WorkflowStepHandler } from "../types";
 
 function extractAttrs(element: Element, attrs: string[] | undefined): Record<string, string | null> {
   if (!attrs || attrs.length === 0) {
@@ -47,9 +47,10 @@ function dedupeValues<T>(values: T[], strategy: CollectListOptions["dedupe"]): T
   }
 
   if (strategy.by === "attr" && strategy.attr) {
+    const attrName = strategy.attr;
     const seen = new Set<string>();
     return values.filter((value) => {
-      const current = (value as Record<string, unknown>)[strategy.attr];
+      const current = (value as Record<string, unknown>)[attrName];
       const key = String(current ?? "");
       if (seen.has(key)) {
         return false;
@@ -80,7 +81,10 @@ function serializeItem(element: Element, options: CollectListOptions): unknown {
   }
 }
 
-async function executeCollectList(args: ActionExecutionArgs<CollectListStep>) {
+async function executeCollectList(
+  args: ActionExecutionArgs<CollectListStep>,
+  _runtime: ActionRuntimeOptions
+): Promise<StepResult> {
   const { step } = args;
   const parentResult = await args.resolveLogicalKey(step.options.parentKey);
   const parent = parentResult.element;
@@ -133,5 +137,5 @@ async function executeCollectList(args: ActionExecutionArgs<CollectListStep>) {
 }
 
 export function createCollectListHandler(options: ActionRuntimeOptions = {}): WorkflowStepHandler {
-  return buildHandler((args) => executeCollectList(args), options);
+  return buildHandler<CollectListStep>((args, runtime) => executeCollectList(args, runtime), options);
 }

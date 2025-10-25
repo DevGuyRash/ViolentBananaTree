@@ -9,7 +9,7 @@ import {
   type ActionExecutionArgs,
   type ActionRuntimeOptions
 } from "./shared";
-import type { CaptureStep, WorkflowStepHandler } from "../types";
+import type { CaptureStep, StepResult, WorkflowStepHandler } from "../types";
 
 function extractValue(step: CaptureStep, element: Element | null): unknown {
   if (!element) {
@@ -49,7 +49,10 @@ function extractValue(step: CaptureStep, element: Element | null): unknown {
   }
 }
 
-async function executeCapture(args: ActionExecutionArgs<CaptureStep>) {
+async function executeCapture(
+  args: ActionExecutionArgs<CaptureStep>,
+  _runtime: ActionRuntimeOptions
+): Promise<StepResult> {
   const { step } = args;
   const result = await args.resolveLogicalKey(step.from.key);
   const element = result.element;
@@ -79,5 +82,5 @@ async function executeCapture(args: ActionExecutionArgs<CaptureStep>) {
 }
 
 export function createCaptureHandler(options: ActionRuntimeOptions = {}): WorkflowStepHandler {
-  return buildHandler((args) => executeCapture(args), options);
+  return buildHandler<CaptureStep>(executeCapture, options);
 }

@@ -10,7 +10,7 @@ import {
   type ActionExecutionArgs,
   type ActionRuntimeOptions
 } from "./shared";
-import type { WaitTextStep, WorkflowStepHandler } from "../types";
+import type { StepResult, WaitTextStep, WorkflowStepHandler } from "../types";
 
 function findScopeElement(key: string | undefined, root: Document | null): Element | null {
   if (!key || !root) {
@@ -29,7 +29,10 @@ function findScopeElement(key: string | undefined, root: Document | null): Eleme
   return root.body ?? null;
 }
 
-async function executeWaitText(args: ActionExecutionArgs<WaitTextStep>, runtime: ActionRuntimeOptions) {
+async function executeWaitText(
+  args: ActionExecutionArgs<WaitTextStep>,
+  runtime: ActionRuntimeOptions
+): Promise<StepResult> {
   const { step, resolveResult, signal } = args;
   const templateOptions = withEnvironment(args, runtime.environment);
   const documentRoot = resolveResult?.element?.ownerDocument ?? globalThis.document ?? null;
@@ -69,5 +72,5 @@ async function executeWaitText(args: ActionExecutionArgs<WaitTextStep>, runtime:
 }
 
 export function createWaitTextHandler(options: ActionRuntimeOptions = {}): WorkflowStepHandler {
-  return buildHandler((args, runtime) => executeWaitText(args, runtime), options);
+  return buildHandler<WaitTextStep>((args, runtime) => executeWaitText(args, runtime), options);
 }

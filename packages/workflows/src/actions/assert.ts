@@ -7,7 +7,7 @@ import {
   type ActionExecutionArgs,
   type ActionRuntimeOptions
 } from "./shared";
-import type { Assertion, AssertStep, WorkflowStepHandler } from "../types";
+import type { Assertion, AssertStep, StepResult, WorkflowStepHandler } from "../types";
 
 async function assertExists(assertion: Assertion & { kind: "exists" }, args: ActionExecutionArgs<AssertStep>): Promise<void> {
   const result = await args.resolveLogicalKey(assertion.key);
@@ -178,7 +178,10 @@ async function evaluateAssertion(assertion: Assertion, args: ActionExecutionArgs
   }
 }
 
-async function executeAssert(args: ActionExecutionArgs<AssertStep>) {
+async function executeAssert(
+  args: ActionExecutionArgs<AssertStep>,
+  _runtime: ActionRuntimeOptions
+): Promise<StepResult> {
   const { step } = args;
   await evaluateAssertion(step.check, args);
 
@@ -188,5 +191,5 @@ async function executeAssert(args: ActionExecutionArgs<AssertStep>) {
 }
 
 export function createAssertHandler(options: ActionRuntimeOptions = {}): WorkflowStepHandler {
-  return buildHandler((args) => executeAssert(args), options);
+  return buildHandler<AssertStep>(executeAssert, options);
 }

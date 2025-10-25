@@ -94,5 +94,5 @@ async function executeSetContext(args: ActionExecutionArgs<SetContextStep>, runt
 }
 
 export function createSetContextHandler(options: ActionRuntimeOptions = {}): WorkflowStepHandler {
-  return buildHandler((args, runtime) => executeSetContext(args, runtime), options);
+  return buildHandler<SetContextStep>((args, runtime) => executeSetContext(args, runtime), options);
 }
