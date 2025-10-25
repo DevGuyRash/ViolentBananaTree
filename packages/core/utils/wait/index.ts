@@ -112,6 +112,21 @@ export type {
 } from "./types";
 
 export {
+  createMutationIdleGate,
+  MutationIdleWindowExceededError
+} from "./idle-gate";
+
+export type {
+  MutationIdleGateDependencies,
+  MutationIdleGateHeartbeatEvent,
+  MutationIdleGateOptions,
+  MutationIdleGateResult,
+  MutationIdleGateStatistics,
+  MutationIdleGateTelemetry,
+  MutationIdleGateWaitOptions
+} from "./idle-gate";
+
+export {
   createWaitScheduler,
   DEFAULT_WAIT_INTERVAL_MS,
   DEFAULT_WAIT_TIMEOUT_MS,
