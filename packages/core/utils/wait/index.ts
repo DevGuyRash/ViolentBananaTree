@@ -118,6 +118,18 @@ export {
   WaitScheduler
 } from "./scheduler";
 
+export {
+  createTextPredicate,
+  evaluateTextPredicate,
+  type TextPredicateConfig
+} from "./predicates/text";
+
+export {
+  createVisibilityPredicate,
+  evaluateVisibilityPredicate,
+  type VisibilityPredicateConfig
+} from "./predicates/visibility";
+
 export type {
   WaitPredicate,
   WaitPredicateContext,
