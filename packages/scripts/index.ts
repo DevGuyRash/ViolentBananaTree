@@ -2,12 +2,12 @@ import {
   cancelRun,
   runWorkflow,
   type WorkflowResolver,
-  type WorkflowRunOutcome,
   type WorkflowRunTelemetryEvent,
-  type WorkflowRuntimeLogger,
   type WorkflowRuntimeOptions
 } from "../workflows/src/engine/runtime";
-import { createDefaultScheduler, type WorkflowScheduler } from "../workflows/src/engine/scheduler";
+import { createDefaultScheduler } from "../workflows/src/engine/scheduler";
+import type { WorkflowScheduler } from "../workflows/src/engine/runtime";
+import type { WorkflowRunOutcome, WorkflowRuntimeLogger } from "../workflows/src/types";
 import { createWorkflowResolverBridge, type WorkflowResolverBridgeOptions } from "../workflows/src/engine/resolver";
 import { createContextManager } from "../workflows/src/engine/context";
 import {
