@@ -149,6 +149,7 @@ export type {
   WaitPredicate,
   WaitPredicateContext,
   WaitPredicateResult,
+  WaitLogger,
   WaitResolver,
   WaitResolverOptions,
   WaitScheduleOptions,
@@ -162,3 +163,16 @@ export type {
   WaitTelemetryStartEvent,
   WaitTelemetrySuccessEvent
 } from "./scheduler";
+
+export {
+  createWaitHelpers
+} from "./helpers";
+
+export type {
+  WaitForOptions,
+  WaitHelpers,
+  WaitHelpersDependencies,
+  WaitIdleOptions,
+  WaitTextOptions,
+  WaitVisibilityOptions
+} from "./helpers";
