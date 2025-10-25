@@ -290,9 +290,14 @@ function sanitizeRunEvent(
   event: WorkflowRunTelemetryEvent,
   sanitize?: (value: unknown) => unknown
 ): WorkflowRunTelemetryEvent {
+  const metadata =
+    typeof event.metadata === "undefined"
+      ? undefined
+      : (sanitizeData(event.metadata, sanitize) as Record<string, unknown>);
+
   return {
     ...event,
-    metadata: sanitizeData(event.metadata ?? {}, sanitize),
+    metadata,
     error: sanitizeError(event.error, sanitize)
   };
 }
@@ -317,7 +322,7 @@ function sanitizeError(
 
   return {
     ...error,
-    data: sanitizeData(error.data, sanitize)
+    data: sanitizeData(error.data, sanitize) as Record<string, unknown> | undefined
   };
 }
 

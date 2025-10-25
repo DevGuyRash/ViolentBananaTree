@@ -69,7 +69,7 @@ class WorkflowContextManagerImpl implements WorkflowContextManager {
       configurable: true
     });
 
-    const proxy: ManagedContext = {
+    const proxy = {
       get: (key) => this.get(key),
       set: (key, value) => this.set(key, value),
       delete: (key) => this.delete(key),
@@ -79,7 +79,13 @@ class WorkflowContextManagerImpl implements WorkflowContextManager {
         });
       },
       snapshot: () => this.snapshot()
-    };
+    } as ManagedContext;
+
+    Object.defineProperty(proxy, "state", {
+      get: () => this.snapshot(),
+      enumerable: true,
+      configurable: true
+    });
 
     Object.defineProperty(proxy, MANAGER_REF, {
       value: this,

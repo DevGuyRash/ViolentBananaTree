@@ -11,6 +11,41 @@ import {
 } from "./errors";
 import type { WorkflowResolver, WorkflowResolverRequest } from "./runtime";
 
+type CoreLogger = typeof import("../../../core/debug");
+
+function normalizeLogData(data: unknown): Record<string, unknown> | undefined {
+  if (data === null || typeof data === "undefined") {
+    return undefined;
+  }
+
+  if (typeof data === "object") {
+    return data as Record<string, unknown>;
+  }
+
+  return { value: data };
+}
+
+function adaptLogger(logger: WorkflowResolverRequest["logger"]): CoreLogger | undefined {
+  if (!logger) {
+    return undefined;
+  }
+
+  return {
+    debug(message: string, data?: unknown) {
+      logger.debug?.(message, normalizeLogData(data));
+    },
+    info(message: string, data?: unknown) {
+      logger.info?.(message, normalizeLogData(data));
+    },
+    warn(message: string, data?: unknown) {
+      logger.warn?.(message, normalizeLogData(data));
+    },
+    error(message: string, data?: unknown) {
+      logger.error?.(message, normalizeLogData(data));
+    }
+  } satisfies CoreLogger;
+}
+
 export interface WorkflowResolverBridgeOptions {
   selectorMap: SelectorMap;
   telemetry?: ResolverTelemetry;
@@ -117,7 +152,7 @@ async function resolveSelectorSafe(
   try {
     const result = await Promise.resolve(
       delegate(map, request.step.key, {
-        logger: request.logger,
+        logger: adaptLogger(request.logger),
         telemetry
       })
     );
