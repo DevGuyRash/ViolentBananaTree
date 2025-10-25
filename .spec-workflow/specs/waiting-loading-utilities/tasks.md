@@ -34,7 +34,7 @@
   - _Requirements: 3, 5_
   - _Prompt: Role: Browser automation specialist proficient in MutationObserver patterns | Task: Implement idle gate meeting requirements 3 and 5, coordinating idleMs/maxWindowMs and telemetry heartbeat events | Restrictions: Disconnect observers after completion, record last mutation timestamp, respect performance budget | Success: Idle waits resolve when window satisfied, errors contain mutation statistics, integrates with scheduler_
 
-- [ ] 5. Expose wait helper API surface
+- [x] 5. Expose wait helper API surface
   - File: packages/core/utils/wait/index.ts (update)
   - Export factory `createWaitHelpers(deps)` returning `waitFor`, `waitText`, `waitVisible`, `waitHidden`, `waitForIdle`
   - Purpose: Provide clear entrypoint for workflows and recorder modules with dependency injection hooks
