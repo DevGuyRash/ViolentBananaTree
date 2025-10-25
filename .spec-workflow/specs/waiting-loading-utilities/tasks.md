@@ -9,7 +9,7 @@
   - _Requirements: 1, 4, 5_
   - _Prompt: Role: TypeScript library engineer specializing in browser automation waits | Task: Create shared wait option/result/error interfaces aligned with requirements 1, 4, and 5, re-exporting through packages/core barrels | Restrictions: Adhere to existing naming conventions, avoid runtime logic, document discriminated union members via JSDoc | Success: Types compile without errors, consumers can import typed options/results, error codes mirror requirements_
 
-- [ ] 2. Implement WaitScheduler with resolver integration
+- [x] 2. Implement WaitScheduler with resolver integration
   - File: packages/core/utils/wait/scheduler.ts (new)
   - Create scheduler class/functions orchestrating resolver attempts, timeout budgeting, polling loop, and jittered intervals
   - Inject resolver, clock, telemetry, and logger dependencies via constructor/factory pattern
