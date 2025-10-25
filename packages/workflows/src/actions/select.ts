@@ -158,5 +158,5 @@ async function executeSelect(args: ActionExecutionArgs<SelectStep>, runtime: Act
 }
 
 export function createSelectHandler(options: ActionRuntimeOptions = {}): WorkflowStepHandler {
-  return buildHandler((args, runtime) => executeSelect(args, runtime), options);
+  return buildHandler<SelectStep>((args, runtime) => executeSelect(args, runtime), options);
 }

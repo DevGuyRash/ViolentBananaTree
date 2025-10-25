@@ -31,6 +31,7 @@ export interface StepMetadata {
   intervalMs?: number;
   retries?: number;
   backoffMs?: number;
+  maxBackoffMs?: number;
   jitterMs?: number;
   debug?: boolean;
   continueOnError?: boolean;
@@ -83,6 +84,7 @@ export type SelectStep = StepMetadata & {
   key: LogicalKey;
   value?: TemplateString;
   fromCtx?: ContextPath;
+  fromEnv?: string;
   optionBy?: "value" | "label" | "index";
   allowMultiple?: boolean;
 };
