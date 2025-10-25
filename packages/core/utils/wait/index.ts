@@ -110,3 +110,28 @@ export type {
   WaitVisibilityMismatchError,
   WaitVisibilitySnapshot
 } from "./types";
+
+export {
+  createWaitScheduler,
+  DEFAULT_WAIT_INTERVAL_MS,
+  DEFAULT_WAIT_TIMEOUT_MS,
+  WaitScheduler
+} from "./scheduler";
+
+export type {
+  WaitPredicate,
+  WaitPredicateContext,
+  WaitPredicateResult,
+  WaitResolver,
+  WaitResolverOptions,
+  WaitScheduleOptions,
+  WaitSchedulerClock,
+  WaitSchedulerDependencies,
+  WaitTelemetry,
+  WaitTelemetryAttemptEvent,
+  WaitTelemetryEventBase,
+  WaitTelemetryFailureEvent,
+  WaitTelemetryHeartbeatEvent,
+  WaitTelemetryStartEvent,
+  WaitTelemetrySuccessEvent
+} from "./scheduler";
