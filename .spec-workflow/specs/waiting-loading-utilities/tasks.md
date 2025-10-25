@@ -26,7 +26,7 @@
   - _Requirements: 2, 4_
   - _Prompt: Role: Frontend systems engineer focused on DOM diagnostics | Task: Create predicate evaluators for text and visibility states aligned with requirements 2 and 4 | Restrictions: Mask sensitive text via sanitizer, compute visibility using display/visibility/opacity/bounding box heuristics, return structured snapshots for logging | Success: Predicates report satisfied status accurately, snapshots feed telemetry, stale nodes handled gracefully_
 
-- [ ] 4. Implement mutation idle gate utilities
+- [x] 4. Implement mutation idle gate utilities
   - File: packages/core/utils/wait/idle-gate.ts (new)
   - Create shared MutationObserver wrapper enforcing idle windows with configurable idle duration and max window cutoffs
   - Purpose: Provide reusable idle detection for asynchronous rerenders and virtualized content
