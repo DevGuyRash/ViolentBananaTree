@@ -1,6 +1,6 @@
 # Tasks Document
 
-- [ ] 1. Establish wait configuration contracts
+- [x] 1. Establish wait configuration contracts
   - File: packages/core/utils/wait/types.ts (new)
   - Define `WaitOptions`, `VisibilityOptions`, `IdleWindowOptions`, `WaitResult`, and `WaitError` interfaces with discriminated error codes
   - Export typed factories through `packages/core/utils/wait/index.ts`
