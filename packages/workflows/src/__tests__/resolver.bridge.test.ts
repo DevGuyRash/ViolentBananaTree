@@ -5,7 +5,7 @@ import { createWorkflowResolverBridge } from "../engine/resolver";
 import { StepError } from "../engine/errors";
 import type { WorkflowResolverRequest } from "../engine/runtime";
 import { InMemoryWorkflowContext } from "../types";
-import type { SelectorMap } from "../../selectors/types";
+import type { SelectorMap } from "../../../selectors/types";
 
 const selectorMap: SelectorMap = {
   action_button: {

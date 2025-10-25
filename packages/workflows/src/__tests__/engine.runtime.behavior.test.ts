@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 import {
   runWorkflow,
   type WorkflowScheduler,
-  type WorkflowSchedulerEnvironment
+  type WorkflowSchedulerEnvironment,
+  type WorkflowResolver
 } from "../engine/runtime";
 import { createDefaultScheduler } from "../engine/scheduler";
 import { WorkflowTelemetryAdapter } from "../telemetry/runtime";
@@ -16,7 +17,6 @@ import {
   InMemoryWorkflowContext,
   type WorkflowDefinition,
   type WorkflowHandlers,
-  type WorkflowResolver,
   type WorkflowRunOutcome,
   type StepTelemetryEvent,
   type LogStep,
@@ -280,7 +280,7 @@ test("control flow executes deterministically with scoped context", async () => 
 
   const handlers: WorkflowHandlers = {
     log: (args) => {
-      if (args.step.message === "record") {
+      if (args.step.kind === "log" && args.step.message === "record") {
         iterationOrder.push({
           item: args.context.get("item"),
           index: args.context.get("idx")

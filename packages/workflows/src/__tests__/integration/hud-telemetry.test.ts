@@ -76,13 +76,15 @@ test("HUD receives workflow lifecycle and step status telemetry", async () => {
 
     const stepSuccess = notifications.find((notification) => notification.title === "[DGX] Step success");
     assert.ok(stepSuccess);
-    assert.match(stepSuccess.description, /duration: 600ms/);
+  assert.equal(typeof stepSuccess.description, "string");
+  assert.match(stepSuccess.description ?? "", /duration: 600ms/);
     const stepMetadata = stepSuccess.metadata as { status?: string } | undefined;
     assert.equal(stepMetadata?.status, "success");
 
     const runComplete = notifications.find((notification) => notification.title === "[DGX] Workflow hud-success completed");
     assert.ok(runComplete);
-    assert.match(runComplete.description, /duration: 600ms/);
+  assert.equal(typeof runComplete.description, "string");
+  assert.match(runComplete.description ?? "", /duration: 600ms/);
     const runMetadata = runComplete.metadata as { status?: string; workflowId?: string } | undefined;
     assert.equal(runMetadata?.status, "success");
     assert.equal(runMetadata?.workflowId, "hud-success");
