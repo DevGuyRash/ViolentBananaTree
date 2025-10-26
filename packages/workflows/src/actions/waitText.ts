@@ -1,74 +1,54 @@
-import { StepError } from "../engine/errors";
 import {
   buildHandler,
   buildResult,
-  matchesText,
-  pollUntil,
   renderTemplate,
-  safeTextContent,
   withEnvironment,
   type ActionExecutionArgs,
   type ActionRuntimeOptions
 } from "./shared";
 import type { StepResult, WaitTextStep, WorkflowStepHandler } from "../types";
-
-function findScopeElement(key: string | undefined, root: Document | null): Element | null {
-  if (!key || !root) {
-    return root?.body ?? null;
-  }
-
-  const selectors = [`[data-dgx-key="${key}"]`, `[data-logical-key="${key}"]`];
-
-  for (const selector of selectors) {
-    const match = root.querySelector(selector);
-    if (match) {
-      return match;
-    }
-  }
-
-  return root.body ?? null;
-}
+import { runWait, serializeWaitResult } from "./wait";
 
 async function executeWaitText(
   args: ActionExecutionArgs<WaitTextStep>,
   runtime: ActionRuntimeOptions
 ): Promise<StepResult> {
-  const { step, resolveResult, signal } = args;
+  const { step } = args;
   const templateOptions = withEnvironment(args, runtime.environment);
-  const documentRoot = resolveResult?.element?.ownerDocument ?? globalThis.document ?? null;
-  const expected = renderTemplate(step.text, templateOptions);
+  const expected = renderTemplate(step.text, templateOptions).trim();
 
-  const success = await pollUntil(() => {
-    const scope = findScopeElement(step.withinKey, documentRoot);
+  const textPattern = buildCasePattern(expected, step.exact, step.caseSensitive);
 
-    if (!scope) {
-      return false;
-    }
-
-    const content = safeTextContent(scope);
-
-    return matchesText(content, expected, {
-      exact: step.exact,
-      caseSensitive: step.caseSensitive
-    });
-  }, {
+  const result = await runWait("waitText", args, runtime, {
+    text: expected.length > 0 ? expected : undefined,
+    textPattern,
+    textMode: step.exact ? "exact" : "contains",
+    scopeKey: step.withinKey,
     timeoutMs: step.timeoutMs,
     intervalMs: step.intervalMs,
-    signal
+    debug: step.debug
   });
-
-  if (!success) {
-    throw new StepError({
-      reason: "timeout",
-      message: "waitText condition not satisfied before timeout",
-      stepKind: step.kind,
-      stepId: step.id
-    });
-  }
 
   return buildResult("success", {
-    notes: step.name ?? "Text condition satisfied"
+    notes: step.name ?? "Text condition satisfied",
+    data: {
+      wait: serializeWaitResult(result)
+    }
   });
+}
+
+function buildCasePattern(value: string, exact?: boolean, caseSensitive?: boolean): RegExp | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  if (caseSensitive) {
+    return undefined;
+  }
+
+  const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = exact ? `^${escaped}$` : escaped;
+  return new RegExp(pattern, "i");
 }
 
 export function createWaitTextHandler(options: ActionRuntimeOptions = {}): WorkflowStepHandler {
