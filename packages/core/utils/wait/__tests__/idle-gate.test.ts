@@ -1,84 +1,121 @@
-import { JSDOM } from "jsdom";
-import { createMutationIdleGate } from "../idle-gate";
-import {
-  vi,
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-  afterEach,
-  beforeEach,
-} from "vitest";
+import test from "node:test";
+import assert from "node:assert/strict";
 
-describe("createMutationIdleGate", ()_=>_{
-  let dom: JSDOM;
-  let observer: MutationObserver | null = null;
-  const mutationObserverCbMap = new WeakMap<
-    MutationObserver,
-    MutationCallback
-  >();
+import { createMutationIdleGate, MutationIdleWindowExceededError } from "../idle-gate";
 
-  // a MutationObserver mock that allows us to manually trigger callbacks
-  const MutationObserverMock = vi.fn((cb: MutationCallback) => {
-    const observerInstance = {
-      observe: vi.fn(),
-      disconnect: vi.fn(),
-      takeRecords: vi.fn(),
-    };
-    mutationObserverCbMap.set(observerInstance, cb);
-    observer = observerInstance;
-    return observerInstance;
+type ObserverStub = {
+  observeCalls: Array<{ target: Node | Document | DocumentFragment | ShadowRoot | Element; options?: MutationObserverInit }>;
+  disconnectCalls: number;
+  callback: MutationCallback | null;
+};
+
+function createObserverStub(): { observer: MutationObserver; stub: ObserverStub } {
+  const stub: ObserverStub = {
+    observeCalls: [],
+    disconnectCalls: 0,
+    callback: null
+  };
+
+  const observer: MutationObserver = {
+    observe(target: Node, options?: MutationObserverInit) {
+      stub.observeCalls.push({ target, options });
+    },
+    disconnect() {
+      stub.disconnectCalls += 1;
+    },
+    takeRecords() {
+      return [];
+    }
+  } as MutationObserver;
+
+  return { observer, stub };
+}
+
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+const fakeRoot = { nodeName: "#document" } as unknown as Document;
+const fakeTarget = { nodeName: "DIV" } as unknown as Element;
+
+test("waitForIdle resolves after idle window elapses", async () => {
+  const { observer, stub } = createObserverStub();
+
+  const gate = createMutationIdleGate({
+    createObserver(callback) {
+      stub.callback = callback;
+      return observer;
+    }
   });
 
-  beforeAll(() => {
-    vi.useFakeTimers();
+  const result = await gate.waitForIdle({
+    idle: { idleMs: 10 },
+    root: fakeRoot
   });
 
-    beforeEach(() => {
-    dom = new JSDOM("<!DOCTYPE html><div></div>");
-    vi.stubGlobal("document", dom.window.document);
-    vi.stubGlobal("MutationObserver", MutationObserverMock);
+  assert.ok(result.durationMs >= 10);
+  assert.equal(result.statistics.totalMutations, 0);
+  assert.equal(stub.disconnectCalls, 1, "observer should disconnect after completion");
+  assert.ok(stub.observeCalls.length >= 1, "observer should observe the provided root");
+});
+
+test("waitForIdle resets idle timer on mutation events", async () => {
+  const { observer, stub } = createObserverStub();
+  const gate = createMutationIdleGate({
+    createObserver(callback) {
+      stub.callback = callback;
+      return observer;
+    }
   });
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.clearAllMocks();
-    vi.clearAllTimers();
+  const waitPromise = gate.waitForIdle({
+    idle: { idleMs: 40 },
+    root: fakeRoot,
+    targets: fakeRoot
   });
 
-  afterAll(() => {
-    vi.useRealTimers();
+  // Ensure promise does not resolve before first mutation callback.
+  const raceResult = await Promise.race([
+    waitPromise.then(() => "resolved" as const),
+    wait(15).then(() => "timeout" as const)
+  ]);
+  assert.equal(raceResult, "timeout", "idle gate should remain pending before mutation");
+
+  const mutationRecord = {
+    type: "childList",
+    target: fakeTarget,
+    addedNodes: []
+  } as unknown as MutationRecord;
+
+  stub.callback?.([mutationRecord], observer);
+
+  const lateRace = await Promise.race([
+    waitPromise.then(() => "resolved" as const),
+    wait(30).then(() => "timeout" as const)
+  ]);
+  assert.equal(lateRace, "timeout", "mutation should reset idle timer and keep promise pending");
+
+  const result = await waitPromise;
+  assert.ok(result.durationMs >= 40, "idle timer should complete after mutation reset");
+  assert.equal(result.statistics.totalMutations, 1, "mutation should be counted");
+  assert.equal(stub.disconnectCalls, 1, "observer should disconnect after completion");
+});
+
+test("waitForIdle enforces maxWindowMs via MutationIdleWindowExceededError", async () => {
+  const { observer, stub } = createObserverStub();
+  const gate = createMutationIdleGate({
+    createObserver(callback) {
+      stub.callback = callback;
+      return observer;
+    }
   });
 
-  it("should resolve when the idle window is reached", async () => {
-    const idleGate = createMutationIdleGate({
-      idleWindowMs: 100,
+  await assert.rejects(async () => {
+    await gate.waitForIdle({
+      idle: { idleMs: 100, maxWindowMs: 20 },
+      root: fakeRoot
     });
-    const waitPromise = idleGate.wait();
-
-    vi.advanceTimersByTime(100);
-
-    await expect(waitPromise).resolves.toBeUndefined();
-  });
-
-  it("should reset the idle timer on mutations", async () => {
-    const idleGate = createMutationIdleGate({
-      idleWindowMs: 100,
-    });
-    const waitPromise = idleGate.wait();
-
-    vi.advanceTimersByTime(50);
-    const cb = mutationObserverCbMap.get(observer!)!;
-
-    // simulate a mutation
-    cb([], observer!);
-    vi.advanceTimersByTime(50);
-    // at this point, the total time elapsed is 100ms, but the idle timer should have been reset
-    // so the promise should still be pending
-    cb([], observer!);
-    vi.advanceTimersByTime(100);
-    // now the idle window should be reached
-    await expect(waitPromise).resolves.toBeUndefined();
+  }, (error: unknown) => {
+    assert.ok(error instanceof MutationIdleWindowExceededError);
+    assert.equal(error.code, "idle-window-exceeded");
+    return true;
   });
 });
