@@ -42,7 +42,7 @@
   - _Requirements: 1, 2, 3_
   - _Prompt: Role: Library API designer with focus on developer ergonomics | Task: Assemble wait helper exports aligning with requirements 1-3, exposing typed signatures and dependency injection points | Restrictions: Avoid circular imports, surface debug hooks, ensure tree-shakeable structure | Success: Consumers import helpers from core index, helpers call scheduler/predicates correctly, type definitions accessible_
 
-- [ ] 6. Integrate waits into workflow engine executors
+- [x] 6. Integrate waits into workflow engine executors
   - File: packages/workflows/src/actions/wait.ts (new or update existing)
   - Wire `waitFor`, `waitText`, `waitVisible`, `waitHidden`, and idle windows into workflow step executors with telemetry events
   - Purpose: Ensure workflows leverage new utilities while preserving existing action semantics
