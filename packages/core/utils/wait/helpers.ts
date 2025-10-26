@@ -16,6 +16,7 @@ import {
   type WaitScheduler,
   type WaitSchedulerDependencies
 } from "./scheduler";
+import { createWaitScrollIntegration } from "./integration-scroll";
 import type {
   IdleWindowOptions,
   VisibilityOptions,
@@ -33,6 +34,7 @@ export interface WaitHelpersDependencies extends WaitSchedulerDependencies {
   createIdleGate?: (dependencies?: MutationIdleGateDependencies) => MutationIdleGateInstance;
   idleGateDependencies?: MutationIdleGateDependencies;
   idleGateTelemetry?: MutationIdleGateTelemetry | null;
+  createScrollIntegration?: typeof createWaitScrollIntegration;
 }
 
 export type WaitForOptions = WaitOptions;
@@ -109,14 +111,25 @@ export function createWaitHelpers(dependencies: WaitHelpersDependencies): WaitHe
   const runWait = async (rawOptions: WaitOptions): Promise<WaitResult> => {
     const scheduler = resolveScheduler();
     const predicate = buildPredicate(rawOptions);
+    const scrollIntegrationFactory = dependencies.createScrollIntegration ?? createWaitScrollIntegration;
+    const scrollIntegration = scrollIntegrationFactory({
+      resolver: schedulerDependencies.resolver,
+      logger,
+      sleep: schedulerDependencies.sleep
+    }, rawOptions);
+
     const scheduleOptions: WaitScheduleOptions = {
       ...rawOptions,
-      predicate
-    };
+      predicate,
+      integration: scrollIntegration ?? undefined
+    } satisfies WaitScheduleOptions;
 
     const sanitizeLogs = rawOptions.sanitizeLogs !== false;
     const debugEnabled = rawOptions.debug === true;
     const maskedKey = sanitizeText(rawOptions.key ?? null, sanitizeLogs) ?? undefined;
+    const scrollerKey = rawOptions.scrollerKey ?? rawOptions.hints?.scrollerKey ?? null;
+    const presenceThreshold = rawOptions.presenceThreshold ?? rawOptions.hints?.presenceThreshold;
+    const maskedScrollerKey = sanitizeText(scrollerKey, sanitizeLogs) ?? scrollerKey ?? undefined;
 
     const debugPayload: Record<string, unknown> = {
       key: maskedKey,
@@ -127,7 +140,9 @@ export function createWaitHelpers(dependencies: WaitHelpersDependencies): WaitHe
       idleMs: rawOptions.idle?.idleMs,
       scopeKey: rawOptions.scopeKey,
       timeoutMs: rawOptions.timeoutMs,
-      intervalMs: rawOptions.intervalMs
+      intervalMs: rawOptions.intervalMs,
+      scrollerKey: maskedScrollerKey,
+      presenceThreshold
     };
 
     if (debugEnabled) {

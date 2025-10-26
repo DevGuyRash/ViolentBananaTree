@@ -152,6 +152,10 @@ export type {
   WaitLogger,
   WaitResolver,
   WaitResolverOptions,
+  WaitScheduleIntegration,
+  WaitScheduleIntegrationAction,
+  WaitScheduleIntegrationAfterResolveContext,
+  WaitScheduleIntegrationContext,
   WaitScheduleOptions,
   WaitSchedulerClock,
   WaitSchedulerDependencies,
@@ -176,3 +180,11 @@ export type {
   WaitTextOptions,
   WaitVisibilityOptions
 } from "./helpers";
+
+export {
+  createWaitScrollIntegration
+} from "./integration-scroll";
+
+export type {
+  WaitScrollIntegrationDependencies
+} from "./integration-scroll";

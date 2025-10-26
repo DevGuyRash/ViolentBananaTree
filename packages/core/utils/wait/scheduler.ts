@@ -103,8 +103,27 @@ export interface WaitPredicateResult {
 
 export type WaitPredicate = (context: WaitPredicateContext) => Promise<WaitPredicateResult> | WaitPredicateResult;
 
+export interface WaitScheduleIntegrationContext {
+  options: WaitOptions;
+  pollCount: number;
+  elapsedMs: number;
+  signal?: AbortSignal;
+}
+
+export interface WaitScheduleIntegrationAfterResolveContext extends WaitScheduleIntegrationContext {
+  resolution: WaitTargetResolution;
+}
+
+export type WaitScheduleIntegrationAction = "continue" | "retry";
+
+export interface WaitScheduleIntegration {
+  beforeResolve?(context: WaitScheduleIntegrationContext): Promise<void> | void;
+  afterResolve?(context: WaitScheduleIntegrationAfterResolveContext): Promise<WaitScheduleIntegrationAction> | WaitScheduleIntegrationAction;
+}
+
 export interface WaitScheduleOptions extends WaitOptions {
   predicate?: WaitPredicate;
+  integration?: WaitScheduleIntegration | null;
 }
 
 type WaitTargetResolution = {
@@ -335,11 +354,14 @@ export class WaitScheduler {
     const signal = options.signal;
     const maxAttempts = options.maxAttempts && options.maxAttempts > 0 ? options.maxAttempts : Number.POSITIVE_INFINITY;
     const maxResolverRetries = this.resolveRetryCap(options);
+    const presenceThreshold = this.resolvePresenceThreshold(options);
 
     let pollCount = 0;
     let staleRecoveries = 0;
     let lastResolverResult: ResolveResult | null = null;
     let lastPredicateSnapshot: WaitPredicateSnapshot | undefined;
+    let lastSatisfiedSnapshot: WaitPredicateSnapshot | undefined;
+    let presenceSatisfied = 0;
     let lastHeartbeatAt = startedAt;
 
     const attempts: ResolveAttempt[] = [];
@@ -360,6 +382,15 @@ export class WaitScheduler {
 
       pollCount += 1;
 
+      const integrationContext: WaitScheduleIntegrationContext = {
+        options,
+        pollCount,
+        elapsedMs: this.clock.now() - startedAt,
+        signal
+      } satisfies WaitScheduleIntegrationContext;
+
+      await options.integration?.beforeResolve?.(integrationContext);
+
       const now = this.clock.now();
       if (now >= deadline && pollCount > 1) {
         break;
@@ -375,6 +406,17 @@ export class WaitScheduler {
       const elapsedMs = this.clock.now() - startedAt;
       const hasElement = Boolean(element);
 
+      const integrationAction = await options.integration?.afterResolve?.({
+        ...integrationContext,
+        elapsedMs,
+        resolution
+      } satisfies WaitScheduleIntegrationAfterResolveContext);
+
+      if (integrationAction === "retry") {
+        await this.delayWithRemaining(deadline, intervalMs, signal);
+        continue;
+      }
+
       this.telemetry?.onAttempt?.({
         key: options.key,
         timeoutMs,
@@ -389,6 +431,8 @@ export class WaitScheduler {
       if (element) {
         if (isElementDisconnected(element)) {
           staleRecoveries += 1;
+          presenceSatisfied = 0;
+          lastSatisfiedSnapshot = undefined;
           this.logger.debug?.("WaitScheduler detected stale element", {
             key: options.key,
             pollCount,
@@ -437,6 +481,8 @@ export class WaitScheduler {
 
           if (predicateResult.stale) {
             staleRecoveries += 1;
+            presenceSatisfied = 0;
+            lastSatisfiedSnapshot = undefined;
             this.logger.debug?.("WaitScheduler predicate flagged stale target", {
               key: options.key,
               pollCount,
@@ -471,6 +517,44 @@ export class WaitScheduler {
           }
 
           if (predicateResult.satisfied) {
+            presenceSatisfied = Math.min(presenceThreshold, presenceSatisfied + 1);
+
+            if (predicateResult.snapshot) {
+              lastSatisfiedSnapshot = predicateResult.snapshot;
+            } else if (lastPredicateSnapshot) {
+              lastSatisfiedSnapshot = lastPredicateSnapshot;
+            }
+
+            if (presenceSatisfied >= presenceThreshold) {
+              const finishedAt = this.clock.now();
+              const result = this.buildSuccessResult(options, resolution.resolveResult, {
+                attempts,
+                strategyHistory,
+                pollCount,
+                staleRecoveries,
+                startedAt,
+                finishedAt,
+                predicateSnapshot: lastSatisfiedSnapshot ?? predicateResult.snapshot ?? lastPredicateSnapshot
+              });
+
+              this.telemetry?.onSuccess?.({
+                key: options.key,
+                timeoutMs,
+                intervalMs,
+                result,
+                metadata: options.telemetryMetadata
+              });
+
+              return result;
+            }
+          } else {
+            presenceSatisfied = 0;
+            lastSatisfiedSnapshot = undefined;
+          }
+        } else {
+          presenceSatisfied = Math.min(presenceThreshold, presenceSatisfied + 1);
+
+          if (presenceSatisfied >= presenceThreshold) {
             const finishedAt = this.clock.now();
             const result = this.buildSuccessResult(options, resolution.resolveResult, {
               attempts,
@@ -479,7 +563,7 @@ export class WaitScheduler {
               staleRecoveries,
               startedAt,
               finishedAt,
-              predicateSnapshot: predicateResult.snapshot ?? lastPredicateSnapshot
+              predicateSnapshot: lastSatisfiedSnapshot ?? lastPredicateSnapshot
             });
 
             this.telemetry?.onSuccess?.({
@@ -492,28 +576,10 @@ export class WaitScheduler {
 
             return result;
           }
-        } else {
-          const finishedAt = this.clock.now();
-          const result = this.buildSuccessResult(options, resolution.resolveResult, {
-            attempts,
-            strategyHistory,
-            pollCount,
-            staleRecoveries,
-            startedAt,
-            finishedAt,
-            predicateSnapshot: lastPredicateSnapshot
-          });
-
-          this.telemetry?.onSuccess?.({
-            key: options.key,
-            timeoutMs,
-            intervalMs,
-            result,
-            metadata: options.telemetryMetadata
-          });
-
-          return result;
         }
+      } else {
+        presenceSatisfied = 0;
+        lastSatisfiedSnapshot = undefined;
       }
 
       const heartbeatNow = this.clock.now();
@@ -595,6 +661,23 @@ export class WaitScheduler {
     }
 
     return DEFAULT_MAX_RESOLVER_RETRIES;
+  }
+
+  private resolvePresenceThreshold(options: WaitScheduleOptions): number {
+    const rawThreshold = (() => {
+      if (typeof options.presenceThreshold === "number" && Number.isFinite(options.presenceThreshold)) {
+        return options.presenceThreshold;
+      }
+
+      if (typeof options.hints?.presenceThreshold === "number" && Number.isFinite(options.hints.presenceThreshold)) {
+        return options.hints.presenceThreshold;
+      }
+
+      return 1;
+    })();
+
+    const normalized = Math.max(1, Math.floor(rawThreshold));
+    return Math.min(normalized, 50);
   }
 
   private async resolveTarget(options: WaitScheduleOptions, signal?: AbortSignal): Promise<WaitTargetResolution> {

@@ -45,6 +45,8 @@ export interface WaitOptions {
   maxResolverRetries?: number;
   hints?: WaitHint;
   scopeKey?: string;
+  scrollerKey?: string;
+  presenceThreshold?: number;
   signal?: AbortSignal;
   debug?: boolean;
   telemetryMetadata?: Record<string, unknown>;
