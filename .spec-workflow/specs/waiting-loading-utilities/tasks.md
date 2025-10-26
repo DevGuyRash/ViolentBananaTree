@@ -66,7 +66,7 @@
   - _Requirements: 4_
   - _Prompt: Role: Observability-focused engineer specializing in telemetry schemas | Task: Emit wait lifecycle events and formatted errors per requirement 4 | Restrictions: Mask sensitive data, include strategy histories, align event names with `[DGX] wait:*` convention | Success: Logs appear in HUD timeline with elapsed/poll counts, failure narratives include actionable guidance_
 
-- [ ] 9. Author comprehensive unit and integration tests
+- [x] 9. Author comprehensive unit and integration tests
   - File: packages/core/utils/wait/__tests__/scheduler.test.ts (new) + fixtures
   - Validate resolver fallbacks, text/visibility predicates, idle windows, stale node recovery, and scroller integration scenarios
   - Purpose: Guarantee reliability across dynamic DOM edge cases before end-to-end coverage
