@@ -134,6 +134,7 @@ function cloneRunEvent(event: WorkflowRunTelemetryEvent): WorkflowRunTelemetryEv
 function cloneStepEvent(event: StepTelemetryEvent): StepTelemetryEvent {
   return {
     ...event,
+    data: event.data ? cloneRecord(event.data) : undefined,
     error: cloneStepError(event.error)
   } satisfies StepTelemetryEvent;
 }

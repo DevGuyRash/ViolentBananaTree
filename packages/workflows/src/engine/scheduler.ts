@@ -215,7 +215,8 @@ async function executeAtomicStep(step: WorkflowStep, context: StepExecutionConte
         attempt,
         durationMs: duration,
         logicalKey,
-        notes: applied.notes
+        notes: applied.notes,
+        data: applied.data
       });
       return;
     } catch (error) {
@@ -410,9 +411,9 @@ function applyStepResult(
   result: StepResult | void,
   env: WorkflowSchedulerEnvironment,
   state: SchedulerState
-): { status: StepResultStatus; notes?: string } {
+): { status: StepResultStatus; notes?: string; data?: Record<string, unknown> } {
   if (!result) {
-    return { status: "success" } satisfies { status: StepResultStatus; notes?: string };
+    return { status: "success" } satisfies { status: StepResultStatus; notes?: string; data?: Record<string, unknown> };
   }
 
   const status: StepResultStatus = result.status ?? "success";
@@ -425,7 +426,11 @@ function applyStepResult(
     emitResultLogs(env.logger, result.logs);
   }
 
-  return { status, notes: result.notes } satisfies { status: StepResultStatus; notes?: string };
+  return {
+    status,
+    notes: result.notes,
+    data: result.data
+  } satisfies { status: StepResultStatus; notes?: string; data?: Record<string, unknown> };
 }
 
 function applyContextUpdates(state: SchedulerState, updates: StepContextUpdate[]): void {
@@ -658,6 +663,7 @@ function emitTelemetryEvent(
     attempt: event.attempt ?? 0,
     timestamp: Date.now(),
     durationMs: event.durationMs,
+    data: event.data,
     error: event.error,
     notes: event.notes
   };

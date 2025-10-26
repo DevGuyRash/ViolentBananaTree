@@ -352,6 +352,7 @@ export interface StepTelemetryEvent {
   attempt: number;
   timestamp: number;
   durationMs?: number;
+  data?: Record<string, unknown>;
   error?: StepErrorPayload;
   notes?: string;
 }

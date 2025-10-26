@@ -306,8 +306,14 @@ function sanitizeStepEvent(
   event: StepTelemetryEvent,
   sanitize?: (value: unknown) => unknown
 ): StepTelemetryEvent {
+  const data =
+    typeof event.data === "undefined"
+      ? undefined
+      : (sanitizeData(event.data, sanitize) as Record<string, unknown> | undefined);
+
   return {
     ...event,
+    data,
     error: sanitizeError(event.error, sanitize)
   };
 }

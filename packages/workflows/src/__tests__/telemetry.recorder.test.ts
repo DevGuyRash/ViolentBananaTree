@@ -15,6 +15,7 @@ import {
   type WorkflowHandlers
 } from "../types";
 import { StepError } from "../engine/errors";
+import { createLogHandler } from "../actions/log";
 
 const failingResolver: WorkflowResolver = {
   async resolve(_request: WorkflowResolverRequest) {
@@ -33,7 +34,7 @@ test("WorkflowEventRecorder captures sanitized timeline", async () => {
   });
 
   const handlers: WorkflowHandlers = {
-    log: () => {},
+    log: createLogHandler(),
     capture: () => {
       throw new StepError({
         reason: "unknown",
@@ -49,7 +50,7 @@ test("WorkflowEventRecorder captures sanitized timeline", async () => {
   const definition: WorkflowDefinition = {
     id: "recorder-test",
     steps: [
-      { kind: "log", message: "start" },
+      { kind: "log", message: "start", data: { password: "super-secret" } },
       {
         kind: "capture",
         to: "ctx.secret",
@@ -74,6 +75,13 @@ test("WorkflowEventRecorder captures sanitized timeline", async () => {
   assert.ok(timeline.some((entry) => entry.kind === "run" && entry.phase === "started"));
   assert.ok(timeline.some((entry) => entry.kind === "run" && entry.status === "failed"));
   assert.ok(timeline.some((entry) => entry.kind === "step" && entry.status === "attempt"));
+
+  const logSuccess = timeline.find(
+    (entry): entry is typeof entry & { kind: "step" } => entry.kind === "step" && entry.event.stepKind === "log" && entry.status === "success"
+  );
+
+  assert.ok(logSuccess);
+  assert.equal((logSuccess.event.data as { password?: string })?.password, "********");
 
   const failureEvent = timeline.find(
     (entry): entry is typeof entry & { kind: "step" } => entry.kind === "step" && entry.status === "failure"
