@@ -19,6 +19,7 @@ class TestHTMLElement extends EventTarget {
   dispatched: string[] = [];
   focused = false;
   textContent = "";
+  isConnected = true;
 
   dispatchEvent(event: Event): boolean {
     this.dispatched.push(event.type);
@@ -74,7 +75,22 @@ function baseArgs<TStep extends WorkflowStepExecutionArgs["step"]>(step: TStep):
     workflowId: "wf-test",
     logger: {},
     signal: controller.signal,
-    resolveLogicalKey: async () => ({ key: "logical", element: null, attempts: [] } satisfies ResolveResult)
+    resolveLogicalKey: async (key: string) => {
+      if (key === step.key) {
+        const element = (step as { _testElement?: Element })._testElement ?? null;
+        const attempts = element
+          ? [{ strategy: { type: "text", text: "Submit" }, success: true, elements: [element] }]
+          : [];
+        return {
+          key,
+          element,
+          attempts,
+          resolvedBy: attempts[0]?.strategy
+        } satisfies ResolveResult;
+      }
+
+      return { key, element: null, attempts: [] } satisfies ResolveResult;
+    }
   } satisfies WorkflowStepExecutionArgs;
 }
 
@@ -91,6 +107,7 @@ test("click handler dispatches mouse events and focuses element", async () => {
     element: element as unknown as Element,
     attempts: []
   } satisfies ResolveResult;
+  (args as WorkflowStepExecutionArgs & { step: ClickStep }).step._testElement = element as unknown as Element;
 
   const result = await handler(args as ActionExecutionArgs<ClickStep>);
 
@@ -131,6 +148,7 @@ test("waitFor handler resolves when predicate succeeds", async () => {
     element: element as unknown as Element,
     attempts: []
   } satisfies ResolveResult;
+  (args as WorkflowStepExecutionArgs & { step: WaitForStep }).step._testElement = element as unknown as Element;
 
   const result = await handler(args as ActionExecutionArgs<WaitForStep>);
 
@@ -154,6 +172,7 @@ test("waitFor handler throws timeout when predicate fails", async () => {
     element: element as unknown as Element,
     attempts: []
   } satisfies ResolveResult;
+  (args as WorkflowStepExecutionArgs & { step: WaitForStep }).step._testElement = element as unknown as Element;
 
   await assert.rejects(async () => {
     await handler(args as ActionExecutionArgs<WaitForStep>);
