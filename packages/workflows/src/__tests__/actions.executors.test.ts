@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { createClickHandler } from "../actions/click";
 import { createWaitForHandler } from "../actions/waitFor";
+import { createWaitVisibleHandler } from "../actions/waitVisible";
 import { createCaptureHandler } from "../actions/capture";
 import type { ActionExecutionArgs } from "../actions/shared";
 import {
@@ -10,10 +11,12 @@ import {
   type WorkflowStepExecutionArgs,
   type ClickStep,
   type WaitForStep,
+  type WaitVisibleStep,
   type CaptureStep
 } from "../types";
 import type { ResolveResult } from "../../../core/resolve";
 import { StepError } from "../engine/errors";
+import { DEFAULT_WAIT_INTERVAL_MS, DEFAULT_WAIT_TIMEOUT_MS } from "../../../core/utils/wait";
 
 class TestHTMLElement extends EventTarget {
   dispatched: string[] = [];
@@ -153,6 +156,14 @@ test("waitFor handler resolves when predicate succeeds", async () => {
   const result = await handler(args as ActionExecutionArgs<WaitForStep>);
 
   assert.equal(result?.status, "success");
+  const waitPayload = result?.data?.wait as {
+    metadata?: { timeoutMs?: number; intervalMs?: number };
+    guidance?: string;
+  };
+  assert.ok(waitPayload);
+  assert.equal(waitPayload?.metadata?.timeoutMs, DEFAULT_WAIT_TIMEOUT_MS);
+  assert.equal(waitPayload?.metadata?.intervalMs, DEFAULT_WAIT_INTERVAL_MS);
+  assert.ok(typeof waitPayload?.guidance === "string" && (waitPayload?.guidance ?? "").length > 0);
 });
 
 test("waitFor handler throws timeout when predicate fails", async () => {
@@ -179,8 +190,42 @@ test("waitFor handler throws timeout when predicate fails", async () => {
   }, (error: unknown) => {
     assert.ok(error instanceof StepError);
     assert.equal(error.reason, "timeout");
+    const payload = error.data?.wait as {
+      metadata?: { timeoutMs?: number };
+      guidance?: string;
+    } | undefined;
+    assert.ok(payload?.metadata?.timeoutMs === 0 || payload?.metadata?.timeoutMs === DEFAULT_WAIT_TIMEOUT_MS);
+    assert.ok(typeof payload?.guidance === "string" && (payload?.guidance ?? "").length > 0);
     return true;
   });
+});
+
+test("waitVisible handler records metadata", async () => {
+  const handler = createWaitVisibleHandler();
+  const element = new TestHTMLElement();
+  element.textContent = "Ready";
+
+  const args = baseArgs<WaitVisibleStep>({
+    kind: "waitVisible",
+    key: "status.banner"
+  });
+
+  (args as ActionExecutionArgs<WaitVisibleStep>).resolveResult = {
+    key: "status.banner",
+    element: element as unknown as Element,
+    attempts: []
+  } satisfies ResolveResult;
+  (args as WorkflowStepExecutionArgs & { step: WaitVisibleStep }).step._testElement = element as unknown as Element;
+
+  const result = await handler(args as ActionExecutionArgs<WaitVisibleStep>);
+
+  assert.equal(result?.status, "success");
+  const waitPayload = result?.data?.wait as {
+    metadata?: { timeoutMs?: number };
+    guidance?: string;
+  };
+  assert.ok(waitPayload?.metadata?.timeoutMs === DEFAULT_WAIT_TIMEOUT_MS);
+  assert.ok(typeof waitPayload?.guidance === "string" && (waitPayload?.guidance ?? "").length > 0);
 });
 
 test("capture handler masks sensitive values when sanitize is enabled", async () => {

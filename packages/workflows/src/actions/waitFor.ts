@@ -7,7 +7,7 @@ import {
   type ActionRuntimeOptions
 } from "./shared";
 import type { StepResult, WaitForStep, WorkflowStepHandler } from "../types";
-import { runWait, serializeWaitResult } from "./wait";
+import { buildWaitHintsFromStep, runWait, serializeWaitResult } from "./wait";
 
 async function executeWaitFor(
   args: ActionExecutionArgs<WaitForStep>,
@@ -17,7 +17,9 @@ async function executeWaitFor(
   const templateOptions = withEnvironment(args, runtime.environment);
   const renderedText = renderTemplate(step.text, templateOptions).trim();
 
-  const result = await runWait("waitFor", args, runtime, {
+  const hints = buildWaitHintsFromStep(step);
+
+  const execution = await runWait("waitFor", args, runtime, {
     key: step.key,
     css: step.css,
     xpath: step.xpath,
@@ -25,6 +27,10 @@ async function executeWaitFor(
     textMode: step.exact ? "exact" : "contains",
     visibility: step.visible ? { target: "visible" } : undefined,
     scopeKey: step.scopeKey,
+    presenceThreshold: step.presenceThreshold ?? hints?.presenceThreshold,
+    scrollerKey: step.scrollerKey ?? hints?.scrollerKey,
+    maxResolverRetries: step.staleRetryCap,
+    hints,
     timeoutMs: step.timeoutMs,
     intervalMs: step.intervalMs,
     debug: step.debug
@@ -33,7 +39,7 @@ async function executeWaitFor(
   return buildResult("success", {
     notes: step.name ?? "Wait condition satisfied",
     data: {
-      wait: serializeWaitResult(result)
+      wait: serializeWaitResult(execution.result, execution.options)
     }
   });
 }

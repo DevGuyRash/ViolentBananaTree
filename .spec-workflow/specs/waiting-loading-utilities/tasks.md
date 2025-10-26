@@ -74,7 +74,7 @@
   - _Requirements: 1, 2, 3, 4, 5_
   - _Prompt: Role: QA automation engineer experienced with DOM testing harnesses | Task: Create unit/integration tests covering requirements 1-5, including dynamic UI and stale node simulations | Restrictions: Use fake timers to control polling, simulate mutation bursts, assert telemetry payloads | Success: Tests assert edge cases, mutation idle windows, timeout enforcement, and logging content_
 
-- [ ] 10. Update recorder export annotations for waits
+- [x] 10. Update recorder export annotations for waits
   - File: packages/recorder/src/to-workflow.ts (update)
   - Ensure recorder inserts wait metadata (predicate type, idle window guidance, resolver key hints) and marks dynamic UI edge cases
   - Purpose: Provide implementers with context when reviewing exported waits and align docs-as-contract principle

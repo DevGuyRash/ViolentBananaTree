@@ -7,7 +7,7 @@ import {
   type ActionRuntimeOptions
 } from "./shared";
 import type { StepResult, WaitTextStep, WorkflowStepHandler } from "../types";
-import { runWait, serializeWaitResult } from "./wait";
+import { buildWaitHintsFromStep, runWait, serializeWaitResult } from "./wait";
 
 async function executeWaitText(
   args: ActionExecutionArgs<WaitTextStep>,
@@ -19,11 +19,17 @@ async function executeWaitText(
 
   const textPattern = buildCasePattern(expected, step.exact, step.caseSensitive);
 
-  const result = await runWait("waitText", args, runtime, {
+  const hints = buildWaitHintsFromStep(step);
+
+  const execution = await runWait("waitText", args, runtime, {
     text: expected.length > 0 ? expected : undefined,
     textPattern,
     textMode: step.exact ? "exact" : "contains",
     scopeKey: step.withinKey,
+    presenceThreshold: step.presenceThreshold ?? hints?.presenceThreshold,
+    scrollerKey: step.scrollerKey ?? hints?.scrollerKey,
+    maxResolverRetries: step.staleRetryCap,
+    hints,
     timeoutMs: step.timeoutMs,
     intervalMs: step.intervalMs,
     debug: step.debug
@@ -32,7 +38,7 @@ async function executeWaitText(
   return buildResult("success", {
     notes: step.name ?? "Text condition satisfied",
     data: {
-      wait: serializeWaitResult(result)
+      wait: serializeWaitResult(execution.result, execution.options)
     }
   });
 }

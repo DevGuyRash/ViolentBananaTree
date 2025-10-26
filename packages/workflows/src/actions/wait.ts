@@ -1,9 +1,12 @@
 import {
+  DEFAULT_WAIT_INTERVAL_MS,
+  DEFAULT_WAIT_TIMEOUT_MS,
   createWaitHelpers,
   createWaitTelemetryAdapter,
   wait as delay,
   type WaitError,
   type WaitForOptions,
+  type WaitHint,
   type WaitHelpers,
   type WaitHelpersDependencies,
   type WaitLogger,
@@ -33,6 +36,11 @@ import { pushHudNotification } from "../../../menu/hud";
 import type { WorkflowStep } from "../types";
 import { StepError } from "../engine/errors";
 
+type WaitExecutionOutcome<TOptions extends WaitOptions = WaitOptions> = {
+  result: WaitResult;
+  options: TOptions;
+};
+
 export type WaitActionKind = "waitFor" | "waitText" | "waitVisible" | "waitHidden" | "waitForIdle";
 
 export async function runWait<TStep extends WorkflowStep, TOptions extends WaitOptions>(
@@ -40,22 +48,29 @@ export async function runWait<TStep extends WorkflowStep, TOptions extends WaitO
   args: ActionExecutionArgs<TStep>,
   runtime: ActionRuntimeOptions,
   options: TOptions
-): Promise<WaitResult> {
+): Promise<WaitExecutionOutcome<TOptions>> {
   const helpers = createWaitHelpersForStep(args, runtime);
   const waitOptions = buildWaitOptions(args, options);
 
   try {
+    let waitResult: WaitResult;
+
     switch (kind) {
       case "waitFor":
-        return await helpers.waitFor(waitOptions as WaitForOptions);
+        waitResult = await helpers.waitFor(waitOptions as WaitForOptions);
+        break;
       case "waitText":
-        return await helpers.waitText(waitOptions as WaitTextOptions);
+        waitResult = await helpers.waitText(waitOptions as WaitTextOptions);
+        break;
       case "waitVisible":
-        return await helpers.waitVisible(waitOptions as WaitVisibilityOptions);
+        waitResult = await helpers.waitVisible(waitOptions as WaitVisibilityOptions);
+        break;
       case "waitHidden":
-        return await helpers.waitHidden(waitOptions as WaitVisibilityOptions);
+        waitResult = await helpers.waitHidden(waitOptions as WaitVisibilityOptions);
+        break;
       case "waitForIdle":
-        return await helpers.waitForIdle(waitOptions as WaitIdleOptions);
+        waitResult = await helpers.waitForIdle(waitOptions as WaitIdleOptions);
+        break;
       default:
         throw new StepError({
           reason: "unknown",
@@ -64,12 +79,21 @@ export async function runWait<TStep extends WorkflowStep, TOptions extends WaitO
           stepId: args.step.id
         });
     }
+
+    return {
+      result: waitResult,
+      options: waitOptions
+    } satisfies WaitExecutionOutcome<TOptions>;
   } catch (error) {
-    throw toStepError(args.step, error);
+    throw toStepError(args.step, error, waitOptions);
   }
 }
 
-export function serializeWaitResult(result: WaitResult): Record<string, unknown> {
+export function serializeWaitResult(result: WaitResult, options?: WaitOptions): Record<string, unknown> {
+  const metadata = buildWaitMetadata(options);
+  const sanitizedMetadata = metadata ? sanitizeForLogging(metadata) as Record<string, unknown> : undefined;
+  const guidance = buildWaitSuccessGuidance(result, metadata);
+
   return {
     key: sanitizeLogicalKey(result.key),
     pollCount: result.pollCount,
@@ -82,7 +106,9 @@ export function serializeWaitResult(result: WaitResult): Record<string, unknown>
     resolveResult: summarizeResolveResult(result.resolveResult),
     target: summarizeElement(result.target ?? result.resolveResult.element ?? null),
     startedAt: result.startedAt,
-    finishedAt: result.finishedAt
+    finishedAt: result.finishedAt,
+    metadata: sanitizedMetadata,
+    guidance: guidance ?? undefined
   } satisfies Record<string, unknown>;
 }
 
@@ -409,13 +435,13 @@ function coalesceNumber(value?: number, fallback?: number): number | undefined {
   return undefined;
 }
 
-function toStepError(step: WorkflowStep, error: unknown): StepError {
+function toStepError(step: WorkflowStep, error: unknown, options?: WaitOptions): StepError {
   if (error instanceof StepError) {
     return error;
   }
 
   if (isWaitError(error)) {
-    return buildWaitStepError(step, error);
+    return buildWaitStepError(step, error, options);
   }
 
   if (error instanceof Error && error.name === "AbortError") {
@@ -425,7 +451,7 @@ function toStepError(step: WorkflowStep, error: unknown): StepError {
   return StepError.fromUnknown(step, "unknown", error);
 }
 
-function buildWaitStepError(step: WorkflowStep, error: WaitError): StepError {
+function buildWaitStepError(step: WorkflowStep, error: WaitError, options?: WaitOptions): StepError {
   const logicalKey = getStepLogicalKey(step) ?? error.key;
   const reason = error.code === "resolver-miss" ? "resolver-miss" : "timeout";
 
@@ -437,7 +463,7 @@ function buildWaitStepError(step: WorkflowStep, error: WaitError): StepError {
     logicalKey,
     attempts: error.pollCount,
     elapsedMs: error.elapsedMs,
-    data: serializeWaitError(error)
+    data: serializeWaitError(error, options)
   }, error);
 }
 
@@ -457,7 +483,10 @@ function buildWaitErrorMessage(error: WaitError): string {
   }
 }
 
-function serializeWaitError(error: WaitError): Record<string, unknown> {
+function serializeWaitError(error: WaitError, options?: WaitOptions): Record<string, unknown> {
+  const metadata = buildWaitMetadata(options);
+  const sanitizedMetadata = metadata ? sanitizeForLogging(metadata) as Record<string, unknown> : undefined;
+
   const waitInfo: Record<string, unknown> = {
     code: error.code,
     key: sanitizeLogicalKey(error.key),
@@ -468,7 +497,8 @@ function serializeWaitError(error: WaitError): Record<string, unknown> {
     finalStrategy: error.strategyHistory[error.strategyHistory.length - 1] ?? null,
     predicateSnapshot: error.predicateSnapshot ? { ...error.predicateSnapshot } : undefined,
     attempts: summarizeAttempts(error.attempts),
-    guidance: buildGuidance(error.code)
+    guidance: buildGuidance(error.code),
+    metadata: sanitizedMetadata
   } satisfies Record<string, unknown>;
 
   switch (error.code) {
@@ -593,6 +623,233 @@ function buildGuidance(code: WaitError["code"]): string {
       return "Consider extending timeoutMs or reviewing predicate expectations.";
   }
 }
+
+export function buildWaitHintsFromStep(source: WaitHintSource): WaitHint | undefined {
+  const hints: WaitHint = {};
+
+  if (typeof source.presenceThreshold === "number" && Number.isFinite(source.presenceThreshold)) {
+    hints.presenceThreshold = source.presenceThreshold;
+  }
+
+  if (typeof source.scrollerKey === "string" && source.scrollerKey.length > 0) {
+    hints.scrollerKey = source.scrollerKey;
+  }
+
+  if (typeof source.staleRetryCap === "number" && Number.isFinite(source.staleRetryCap)) {
+    hints.staleRetryCap = source.staleRetryCap;
+  }
+
+  return Object.keys(hints).length > 0 ? hints : undefined;
+}
+
+type WaitHintSource = {
+  presenceThreshold?: number;
+  scrollerKey?: string;
+  staleRetryCap?: number;
+};
+
+function buildWaitMetadata(options?: WaitOptions): WaitExportMetadata | undefined {
+  if (!options) {
+    return undefined;
+  }
+
+  const timeoutMs = resolveTimeoutMetadata(options);
+  const intervalMs = resolveIntervalMetadata(options);
+  const presenceThreshold = resolvePresenceThresholdMetadata(options);
+  const staleRetryCap = resolveStaleRetryCap(options);
+  const scrollerKey = sanitizeLogicalKey(options.scrollerKey ?? options.hints?.scrollerKey ?? undefined);
+  const scopeKey = sanitizeLogicalKey(options.scopeKey);
+
+  const metadata: WaitExportMetadata = {
+    timeoutMs,
+    intervalMs
+  };
+
+  if (typeof presenceThreshold === "number") {
+    metadata.presenceThreshold = presenceThreshold;
+  }
+
+  if (typeof staleRetryCap === "number") {
+    metadata.staleRetryCap = staleRetryCap;
+  }
+
+  if (typeof scrollerKey === "string" && scrollerKey.length > 0) {
+    metadata.scrollerKey = scrollerKey;
+  }
+
+  if (typeof scopeKey === "string" && scopeKey.length > 0) {
+    metadata.scopeKey = scopeKey;
+  }
+
+  metadata.debug = Boolean(options.debug);
+
+  const textMetadata = buildTextMetadata(options);
+  if (textMetadata) {
+    metadata.text = textMetadata;
+  }
+
+  const visibilityMetadata = buildVisibilityMetadata(options);
+  if (visibilityMetadata) {
+    metadata.visibility = visibilityMetadata;
+  }
+
+  const idleMetadata = buildIdleMetadata(options);
+  if (idleMetadata) {
+    metadata.idle = idleMetadata;
+  }
+
+  return metadata;
+}
+
+function buildWaitSuccessGuidance(result: WaitResult, metadata?: WaitExportMetadata): string | undefined {
+  const suggestions: string[] = [
+    "Wait completed successfully; adjust timeoutMs or predicate configuration if playback flake is observed."
+  ];
+
+  if (result.staleRecoveries > 0) {
+    suggestions.push("Recorder observed stale nodes; capture fallback selectors or increase staleRetryCap.");
+  }
+
+  if (!metadata?.presenceThreshold && result.pollCount > 3) {
+    suggestions.push("Consider setting presenceThreshold to smooth dynamic rendering or virtualization.");
+  }
+
+  if (metadata?.presenceThreshold && metadata.presenceThreshold > 1) {
+    suggestions.push(`Presence threshold ${metadata.presenceThreshold} recorded to confirm stability across polls.`);
+  }
+
+  if (metadata?.scrollerKey) {
+    suggestions.push("Scroller key captured for virtualized list coordination.");
+  }
+
+  if (metadata?.idle?.idleMs) {
+    suggestions.push("Idle gate active; verify idleMs reflects typical rerender cadence.");
+  }
+
+  if (suggestions.length === 0) {
+    return undefined;
+  }
+
+  return suggestions.join(" ");
+}
+
+function resolveTimeoutMetadata(options: WaitOptions): number {
+  if (typeof options.timeoutMs === "number" && Number.isFinite(options.timeoutMs)) {
+    return Math.max(0, options.timeoutMs);
+  }
+
+  return DEFAULT_WAIT_TIMEOUT_MS;
+}
+
+function resolveIntervalMetadata(options: WaitOptions): number {
+  if (typeof options.intervalMs === "number" && Number.isFinite(options.intervalMs)) {
+    return Math.max(0, options.intervalMs);
+  }
+
+  return DEFAULT_WAIT_INTERVAL_MS;
+}
+
+function resolvePresenceThresholdMetadata(options: WaitOptions): number | undefined {
+  if (typeof options.presenceThreshold === "number" && Number.isFinite(options.presenceThreshold)) {
+    return Math.max(1, Math.floor(options.presenceThreshold));
+  }
+
+  if (typeof options.hints?.presenceThreshold === "number" && Number.isFinite(options.hints.presenceThreshold)) {
+    return Math.max(1, Math.floor(options.hints.presenceThreshold));
+  }
+
+  return undefined;
+}
+
+function resolveStaleRetryCap(options: WaitOptions): number | undefined {
+  if (typeof options.maxResolverRetries === "number" && Number.isFinite(options.maxResolverRetries)) {
+    return Math.max(0, Math.floor(options.maxResolverRetries));
+  }
+
+  if (typeof options.hints?.staleRetryCap === "number" && Number.isFinite(options.hints.staleRetryCap)) {
+    return Math.max(0, Math.floor(options.hints.staleRetryCap));
+  }
+
+  return undefined;
+}
+
+function buildTextMetadata(options: WaitOptions): WaitExportMetadata["text"] | undefined {
+  const hasText = typeof options.text === "string" && options.text.length > 0;
+  const hasPattern = options.textPattern instanceof RegExp;
+
+  if (!hasText && !hasPattern && !options.textMode) {
+    return undefined;
+  }
+
+  return {
+    mode: hasPattern ? "regex" : (options.textMode ?? (hasText ? "exact" : undefined)),
+    hasText,
+    hasPattern,
+    length: hasText ? options.text!.length : undefined
+  };
+}
+
+function buildVisibilityMetadata(options: WaitOptions): WaitExportMetadata["visibility"] | undefined {
+  if (!options.visibility) {
+    return undefined;
+  }
+
+  const visibility = options.visibility;
+
+  return {
+    target: visibility.target,
+    requireDisplayed: visibility.requireDisplayed,
+    requireInViewport: visibility.requireInViewport,
+    minOpacity: visibility.minOpacity,
+    minIntersectionRatio: visibility.minIntersectionRatio,
+    minBoundingBoxArea: visibility.minBoundingBoxArea
+  };
+}
+
+function buildIdleMetadata(options: WaitOptions): WaitExportMetadata["idle"] | undefined {
+  if (!options.idle) {
+    return undefined;
+  }
+
+  const idle = options.idle;
+
+  return {
+    idleMs: idle.idleMs,
+    maxWindowMs: idle.maxWindowMs,
+    heartbeatMs: idle.heartbeatMs,
+    captureStatistics: idle.captureStatistics
+  };
+}
+
+type WaitExportMetadata = {
+  timeoutMs: number;
+  intervalMs: number;
+  presenceThreshold?: number;
+  staleRetryCap?: number;
+  scrollerKey?: string;
+  scopeKey?: string;
+  debug?: boolean;
+  text?: {
+    mode?: string;
+    hasText?: boolean;
+    hasPattern?: boolean;
+    length?: number;
+  };
+  visibility?: {
+    target: string;
+    requireDisplayed?: boolean;
+    requireInViewport?: boolean;
+    minOpacity?: number;
+    minIntersectionRatio?: number;
+    minBoundingBoxArea?: number;
+  };
+  idle?: {
+    idleMs: number;
+    maxWindowMs?: number;
+    heartbeatMs?: number;
+    captureStatistics?: boolean;
+  };
+};
 
 function mergeLogPayload(
   base: Record<string, unknown>,
