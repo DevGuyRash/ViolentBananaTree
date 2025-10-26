@@ -302,6 +302,14 @@ function mergeAttempts(base: ResolveAttempt[], extra: ResolveAttempt[]): Resolve
   return cloneAttempts([...base, ...extra]);
 }
 
+function isElementDisconnected(element: Element): boolean {
+  if ("isConnected" in element) {
+    return element.isConnected === false;
+  }
+
+  return false;
+}
+
 export class WaitScheduler {
   private readonly resolver: WaitResolver;
   private readonly logger: WaitLogger;
@@ -350,12 +358,12 @@ export class WaitScheduler {
         throw createAbortError(signal);
       }
 
+      pollCount += 1;
+
       const now = this.clock.now();
-      if (now >= deadline) {
+      if (now >= deadline && pollCount > 1) {
         break;
       }
-
-      pollCount += 1;
 
       const resolution = await this.resolveTarget(options, signal);
 
@@ -379,7 +387,7 @@ export class WaitScheduler {
       });
 
       if (element) {
-        if (!element.isConnected) {
+        if (isElementDisconnected(element)) {
           staleRecoveries += 1;
           this.logger.debug?.("WaitScheduler detected stale element", {
             key: options.key,
