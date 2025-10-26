@@ -50,7 +50,7 @@
   - _Requirements: 1, 2, 4_
   - _Prompt: Role: Workflow runtime engineer ensuring action parity | Task: Integrate new wait helpers into workflow executors following requirements 1, 2, and 4 | Restrictions: Maintain backward compatibility for existing steps, propagate structured errors to HUD, support debug logging toggles | Success: Workflow waits use new scheduler, telemetry shows progress, errors include metadata_
 
-- [ ] 7. Coordinate waits with scroll/virtualization utilities
+- [x] 7. Coordinate waits with scroll/virtualization utilities
   - File: packages/core/utils/wait/integration-scroll.ts (new)
   - Provide helper to sync waits with scroller keys and presence thresholds for virtualized lists
   - Purpose: Prevent stale element detection and align waits with scrolling utilities when skeleton loaders or virtualization present
