@@ -58,7 +58,7 @@
   - _Requirements: 5_
   - _Prompt: Role: Frontend performance engineer versed in virtualized DOM patterns | Task: Bridge wait helpers with scroll utilities per requirement 5 | Restrictions: Ensure integration optional, avoid redundant scrolling loops, expose configuration via WaitOptions.scrollerKey | Success: Waits coordinate with scroll helper to extend presence thresholds and recover from virtualization delays_
 
-- [ ] 8. Emit `[DGX]` wait telemetry and error narratives
+- [x] 8. Emit `[DGX]` wait telemetry and error narratives
   - File: packages/core/utils/wait/telemetry.ts (new)
   - Implement telemetry adapter functions producing heartbeat logs, success/failure entries, and failure messages with guidance
   - Purpose: Standardize wait logging consumed by HUD, recorder, and console observers
