@@ -1,5 +1,6 @@
 import {
   createWaitHelpers,
+  createWaitTelemetryAdapter,
   wait as delay,
   type WaitError,
   type WaitForOptions,
@@ -9,6 +10,14 @@ import {
   type WaitOptions,
   type WaitResult,
   type WaitTelemetry,
+  type WaitTelemetryAttemptEvent,
+  type WaitTelemetryEventEnvelope,
+  type WaitTelemetryNotifier,
+  type WaitTelemetryFailureEvent,
+  type WaitTelemetryHeartbeatEvent,
+  type WaitTelemetrySerializerOptions,
+  type WaitTelemetryStartEvent,
+  type WaitTelemetrySuccessEvent,
   type WaitTextOptions,
   type WaitVisibilityOptions,
   type WaitIdleOptions,
@@ -20,6 +29,7 @@ import type { QueryRoot } from "../../../core/utils/dom";
 import type { SelectorTry } from "../../../selectors/types";
 import type { ActionExecutionArgs, ActionRuntimeOptions } from "./shared";
 import { maskValue, SENSITIVE_KEY_PATTERN } from "./shared";
+import { pushHudNotification } from "../../../menu/hud";
 import type { WorkflowStep } from "../types";
 import { StepError } from "../engine/errors";
 
@@ -159,77 +169,188 @@ function createWaitTelemetry<TStep extends WorkflowStep>(
 
   const base = buildLogBase(args);
 
-  return {
-    onStart(event) {
-      logger.info?.("[DGX] wait:start", mergeLogPayload(base, buildTelemetryPayload(event)));
+  return createWaitTelemetryAdapter({
+    logger,
+    basePayload: base,
+    debug: debugEnabled,
+    serializers: buildWaitTelemetrySerializers(args),
+    transformPayload(payload) {
+      return sanitizeTelemetryPayload(payload);
     },
-    onAttempt(event) {
-      if (!debugEnabled) {
-        return;
-      }
-      logger.debug?.("[DGX] wait:attempt", mergeLogPayload(base, buildTelemetryPayload(event)));
-    },
-    onHeartbeat(event) {
-      logger.info?.("[DGX] wait:heartbeat", mergeLogPayload(base, buildTelemetryPayload(event)));
-    },
-    onSuccess(event) {
-      logger.info?.("[DGX] wait:success", mergeLogPayload(base, {
-        key: sanitizeLogicalKey(event.result.key),
-        result: serializeWaitResult(event.result)
-      }));
-    },
-    onFailure(event) {
-      logger.warn?.("[DGX] wait:failure", mergeLogPayload(base, serializeWaitError(event.error)));
+    notify: buildWaitHudNotifier(args, base),
+    buildFailureNarrative(error) {
+      return buildWaitFailureNarrative(error);
     }
-  } satisfies WaitTelemetry;
+  });
 }
 
-function buildTelemetryPayload(event: Record<string, unknown>): Record<string, unknown> {
-  const payload: Record<string, unknown> = {};
+function buildWaitTelemetrySerializers<TStep extends WorkflowStep>(
+  _args: ActionExecutionArgs<TStep>
+): WaitTelemetrySerializerOptions {
+  return {
+    start: serializeWaitStartEvent,
+    attempt: serializeWaitAttemptEvent,
+    heartbeat: serializeWaitHeartbeatEvent,
+    success: serializeWaitSuccessEvent,
+    failure: serializeWaitFailureEvent
+  } satisfies WaitTelemetrySerializerOptions;
+}
 
-  if ("key" in event) {
-    payload.key = sanitizeLogicalKey(event.key as string | undefined);
+function serializeWaitStartEvent(event: WaitTelemetryStartEvent): Record<string, unknown> {
+  return {
+    key: sanitizeLogicalKey(event.key),
+    timeoutMs: event.timeoutMs,
+    intervalMs: event.intervalMs,
+    startedAt: event.startedAt,
+    metadata: event.metadata ? { ...event.metadata } : undefined
+  } satisfies Record<string, unknown>;
+}
+
+function serializeWaitAttemptEvent(event: WaitTelemetryAttemptEvent): Record<string, unknown> {
+  return {
+    key: sanitizeLogicalKey(event.key),
+    timeoutMs: event.timeoutMs,
+    intervalMs: event.intervalMs,
+    pollCount: event.pollCount,
+    elapsedMs: event.elapsedMs,
+    strategyHistory: [...event.strategyHistory],
+    success: event.success,
+    metadata: event.metadata ? { ...event.metadata } : undefined
+  } satisfies Record<string, unknown>;
+}
+
+function serializeWaitHeartbeatEvent(event: WaitTelemetryHeartbeatEvent): Record<string, unknown> {
+  return {
+    key: sanitizeLogicalKey(event.key),
+    timeoutMs: event.timeoutMs,
+    intervalMs: event.intervalMs,
+    pollCount: event.pollCount,
+    elapsedMs: event.elapsedMs,
+    remainingMs: event.remainingMs,
+    staleRecoveries: event.staleRecoveries,
+    predicateSnapshot: event.predicateSnapshot,
+    metadata: event.metadata ? { ...event.metadata } : undefined
+  } satisfies Record<string, unknown>;
+}
+
+function serializeWaitSuccessEvent(event: WaitTelemetrySuccessEvent): Record<string, unknown> {
+  const resultPayload = serializeWaitResult(event.result);
+
+  return {
+    key: resultPayload.key,
+    timeoutMs: event.timeoutMs,
+    intervalMs: event.intervalMs,
+    pollCount: resultPayload.pollCount,
+    elapsedMs: resultPayload.elapsedMs,
+    strategyHistory: resultPayload.strategyHistory,
+    staleRecoveries: resultPayload.staleRecoveries,
+    predicateSnapshot: resultPayload.predicateSnapshot,
+    idleSnapshot: resultPayload.idleSnapshot,
+    metadata: event.metadata ? { ...event.metadata } : undefined,
+    result: resultPayload
+  } satisfies Record<string, unknown>;
+}
+
+function serializeWaitFailureEvent(event: WaitTelemetryFailureEvent): Record<string, unknown> {
+  const errorPayload = serializeWaitError(event.error);
+  const guidance = ((errorPayload.wait as Record<string, unknown>)?.guidance ?? null) as string | null;
+
+  return {
+    key: sanitizeLogicalKey(event.error.key),
+    timeoutMs: event.timeoutMs,
+    intervalMs: event.intervalMs,
+    pollCount: event.error.pollCount,
+    elapsedMs: event.error.elapsedMs,
+    strategyHistory: [...event.error.strategyHistory],
+    staleRecoveries: event.error.staleRecoveries ?? 0,
+    metadata: event.metadata ? { ...event.metadata } : undefined,
+    error: errorPayload,
+    guidance
+  } satisfies Record<string, unknown>;
+}
+
+function sanitizeTelemetryPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  const sanitized = sanitizeForLogging(payload) as Record<string, unknown>;
+  const maskedKey = sanitizeLogicalKey(resolveTelemetryKey(payload));
+
+  if (typeof maskedKey !== "undefined") {
+    sanitized.key = maskedKey;
+    sanitized.logicalKey = maskedKey;
   }
 
-  if ("metadata" in event && event.metadata) {
-    payload.metadata = sanitizeForLogging(event.metadata);
+  return sanitized;
+}
+
+function resolveTelemetryKey(payload: Record<string, unknown>): string | undefined {
+  const candidate = payload.key;
+  return typeof candidate === "string" && candidate.length > 0 ? candidate : undefined;
+}
+
+function buildWaitHudNotifier<TStep extends WorkflowStep>(
+  args: ActionExecutionArgs<TStep>,
+  base: Record<string, unknown>
+): WaitTelemetryNotifier {
+  return (envelope: WaitTelemetryEventEnvelope) => {
+    if (envelope.kind === "attempt") {
+      return;
+    }
+
+    const payload = envelope.payload;
+    const summaryParts = [
+      `run: ${args.runId}`,
+      `workflow: ${args.workflowId}`,
+      `step: ${args.step.id}`,
+      `event: ${envelope.kind}`
+    ];
+
+    if (typeof payload.pollCount === "number") {
+      summaryParts.push(`polls: ${payload.pollCount}`);
+    }
+
+    if (typeof payload.elapsedMs === "number") {
+      summaryParts.push(`elapsed: ${payload.elapsedMs}ms`);
+    }
+
+    if (typeof payload.timeoutMs === "number") {
+      summaryParts.push(`timeout: ${payload.timeoutMs}ms`);
+    }
+
+    const baseLine = summaryParts.join(" • ");
+    const narrative = typeof payload.narrative === "string" ? payload.narrative : undefined;
+    const description = narrative ? `${baseLine}\n${narrative}` : baseLine;
+
+    const metadata = sanitizeForLogging({
+      ...base,
+      ...payload,
+      eventKind: envelope.kind
+    }) as Record<string, unknown>;
+
+    pushHudNotification({
+      id: `wait-${args.runId}-${args.step.id}-${envelope.kind}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      title: `[DGX] wait:${envelope.kind}`,
+      level: mapTelemetryLevelToHud(envelope.level),
+      description,
+      metadata
+    });
+  };
+}
+
+function mapTelemetryLevelToHud(level: WaitTelemetryEventEnvelope["level"]): "info" | "warn" | "error" {
+  if (level === "error") {
+    return "error";
   }
 
-  if ("pollCount" in event) {
-    payload.pollCount = event.pollCount;
+  if (level === "warn") {
+    return "warn";
   }
 
-  if ("elapsedMs" in event) {
-    payload.elapsedMs = event.elapsedMs;
-  }
+  return "info";
+}
 
-  if ("remainingMs" in event) {
-    payload.remainingMs = event.remainingMs;
-  }
-
-  if ("strategyHistory" in event) {
-    payload.strategyHistory = Array.isArray(event.strategyHistory)
-      ? [...event.strategyHistory]
-      : event.strategyHistory;
-  }
-
-  if ("predicateSnapshot" in event && event.predicateSnapshot) {
-    payload.predicateSnapshot = sanitizeForLogging(event.predicateSnapshot);
-  }
-
-  if ("staleRecoveries" in event) {
-    payload.staleRecoveries = event.staleRecoveries;
-  }
-
-  if ("timeoutMs" in event) {
-    payload.timeoutMs = event.timeoutMs;
-  }
-
-  if ("pollCount" in event && "success" in event) {
-    payload.success = event.success;
-  }
-
-  return payload;
+function buildWaitFailureNarrative(error: WaitError): string {
+  const message = buildWaitErrorMessage(error);
+  const guidance = buildGuidance(error.code);
+  return guidance ? `${message}. Guidance: ${guidance}` : message;
 }
 
 function buildWaitOptions<TStep extends WorkflowStep, TOptions extends WaitOptions>(
@@ -321,7 +442,8 @@ function buildWaitStepError(step: WorkflowStep, error: WaitError): StepError {
 }
 
 function buildWaitErrorMessage(error: WaitError): string {
-  const keyPart = error.key ? ` for '${error.key}'` : "";
+  const maskedKey = sanitizeLogicalKey(error.key);
+  const keyPart = maskedKey ? ` for '${maskedKey}'` : "";
 
   switch (error.code) {
     case "resolver-miss":

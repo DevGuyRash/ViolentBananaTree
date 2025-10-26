@@ -188,3 +188,18 @@ export {
 export type {
   WaitScrollIntegrationDependencies
 } from "./integration-scroll";
+
+export {
+  createWaitTelemetryAdapter,
+  DEFAULT_WAIT_EVENT_PREFIX,
+  defaultFailureNarrative
+} from "./telemetry";
+
+export type {
+  WaitTelemetryAdapterOptions,
+  WaitTelemetryEventEnvelope,
+  WaitTelemetryEventKind,
+  WaitTelemetryLogLevel,
+  WaitTelemetryNotifier,
+  WaitTelemetrySerializerOptions
+} from "./telemetry";
