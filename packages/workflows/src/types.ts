@@ -35,6 +35,7 @@ export interface StepMetadata {
   jitterMs?: number;
   debug?: boolean;
   continueOnError?: boolean;
+  annotations?: Record<string, unknown>;
 }
 
 export type KeyModifierState = {
@@ -98,6 +99,9 @@ export type WaitForStep = StepMetadata & {
   exact?: boolean;
   visible?: boolean;
   scopeKey?: LogicalKey;
+  presenceThreshold?: number;
+  scrollerKey?: LogicalKey;
+  staleRetryCap?: number;
 };
 
 export type WaitTextStep = StepMetadata & {
@@ -106,6 +110,50 @@ export type WaitTextStep = StepMetadata & {
   exact?: boolean;
   withinKey?: LogicalKey;
   caseSensitive?: boolean;
+  presenceThreshold?: number;
+  scrollerKey?: LogicalKey;
+  staleRetryCap?: number;
+};
+
+export type WaitVisibleStep = StepMetadata & {
+  kind: "waitVisible";
+  key: LogicalKey;
+  scopeKey?: LogicalKey;
+  presenceThreshold?: number;
+  scrollerKey?: LogicalKey;
+  staleRetryCap?: number;
+  requireDisplayed?: boolean;
+  requireInViewport?: boolean;
+  minOpacity?: number;
+  minIntersectionRatio?: number;
+  minBoundingBoxArea?: number;
+};
+
+export type WaitHiddenStep = StepMetadata & {
+  kind: "waitHidden";
+  key: LogicalKey;
+  scopeKey?: LogicalKey;
+  presenceThreshold?: number;
+  scrollerKey?: LogicalKey;
+  staleRetryCap?: number;
+  requireDisplayed?: boolean;
+  requireInViewport?: boolean;
+  minOpacity?: number;
+  minIntersectionRatio?: number;
+  minBoundingBoxArea?: number;
+};
+
+export type WaitForIdleStep = StepMetadata & {
+  kind: "waitForIdle";
+  key?: LogicalKey;
+  scopeKey?: LogicalKey;
+  presenceThreshold?: number;
+  scrollerKey?: LogicalKey;
+  staleRetryCap?: number;
+  idleMs?: number;
+  maxWindowMs?: number;
+  heartbeatMs?: number;
+  captureStatistics?: boolean;
 };
 
 export type DelayStep = StepMetadata & {
@@ -296,6 +344,9 @@ export type WorkflowStep =
   | SelectStep
   | WaitForStep
   | WaitTextStep
+  | WaitVisibleStep
+  | WaitHiddenStep
+  | WaitForIdleStep
   | DelayStep
   | LogStep
   | AssertStep
@@ -497,6 +548,12 @@ function validateStepMetadata(step: Record<string, unknown>, path: string, issue
   if ("tags" in step && step.tags !== undefined && !Array.isArray(step.tags)) {
     pushIssue(issues, `${path}.tags`, "expected tags to be an array of strings");
   }
+
+  if ("annotations" in step && step.annotations !== undefined) {
+    if (!isRecord(step.annotations)) {
+      pushIssue(issues, `${path}.annotations`, "annotations must be an object if provided");
+    }
+  }
 }
 
 function validateCondition(condition: unknown, path: string, issues: MutableIssues): condition is Condition {
@@ -665,6 +722,26 @@ const STEP_VALIDATORS: Record<string, StepValidator> = {
     if (!hasKey && !hasCss && !hasXpath && !hasText) {
       pushIssue(issues, path, "waitFor step requires at least one of key, css, xpath, or text");
     }
+
+    if (step.scopeKey !== undefined) {
+      validateLogicalKey(step.scopeKey, `${path}.scopeKey`, issues, { optional: true });
+    }
+
+    if (step.scrollerKey !== undefined) {
+      validateLogicalKey(step.scrollerKey, `${path}.scrollerKey`, issues, { optional: true });
+    }
+
+    if (step.presenceThreshold !== undefined) {
+      if (typeof step.presenceThreshold !== "number" || !Number.isFinite(step.presenceThreshold) || step.presenceThreshold < 1) {
+        pushIssue(issues, `${path}.presenceThreshold`, "presenceThreshold must be a number ≥ 1");
+      }
+    }
+
+    if (step.staleRetryCap !== undefined) {
+      if (typeof step.staleRetryCap !== "number" || !Number.isFinite(step.staleRetryCap) || step.staleRetryCap < 0) {
+        pushIssue(issues, `${path}.staleRetryCap`, "staleRetryCap must be a non-negative number");
+      }
+    }
   },
   waitText(step, path, issues) {
     if (!isNonEmptyString(step.text)) {
@@ -673,6 +750,119 @@ const STEP_VALIDATORS: Record<string, StepValidator> = {
     if (step.withinKey !== undefined) {
       validateLogicalKey(step.withinKey, `${path}.withinKey`, issues, { optional: true });
     }
+
+    if (step.scrollerKey !== undefined) {
+      validateLogicalKey(step.scrollerKey, `${path}.scrollerKey`, issues, { optional: true });
+    }
+
+    if (step.presenceThreshold !== undefined) {
+      if (typeof step.presenceThreshold !== "number" || !Number.isFinite(step.presenceThreshold) || step.presenceThreshold < 1) {
+        pushIssue(issues, `${path}.presenceThreshold`, "presenceThreshold must be a number ≥ 1");
+      }
+    }
+
+    if (step.staleRetryCap !== undefined) {
+      if (typeof step.staleRetryCap !== "number" || !Number.isFinite(step.staleRetryCap) || step.staleRetryCap < 0) {
+        pushIssue(issues, `${path}.staleRetryCap`, "staleRetryCap must be a non-negative number");
+      }
+    }
+  },
+  waitVisible(step, path, issues) {
+    validateLogicalKey(step.key, `${path}.key`, issues);
+
+    if (step.scopeKey !== undefined) {
+      validateLogicalKey(step.scopeKey, `${path}.scopeKey`, issues, { optional: true });
+    }
+
+    if (step.scrollerKey !== undefined) {
+      validateLogicalKey(step.scrollerKey, `${path}.scrollerKey`, issues, { optional: true });
+    }
+
+    if (step.presenceThreshold !== undefined && (typeof step.presenceThreshold !== "number" || !Number.isFinite(step.presenceThreshold) || step.presenceThreshold < 1)) {
+      pushIssue(issues, `${path}.presenceThreshold`, "presenceThreshold must be a number ≥ 1");
+    }
+
+    if (step.staleRetryCap !== undefined && (typeof step.staleRetryCap !== "number" || !Number.isFinite(step.staleRetryCap) || step.staleRetryCap < 0)) {
+      pushIssue(issues, `${path}.staleRetryCap`, "staleRetryCap must be a non-negative number");
+    }
+
+    const numericFields: Array<[keyof WaitVisibleStep, string]> = [
+      ["minOpacity", "minOpacity"],
+      ["minIntersectionRatio", "minIntersectionRatio"],
+      ["minBoundingBoxArea", "minBoundingBoxArea"]
+    ];
+
+    numericFields.forEach(([field, label]) => {
+      const value = step[field];
+      if (value !== undefined && (typeof value !== "number" || !Number.isFinite(value) || value < 0)) {
+        pushIssue(issues, `${path}.${label}`, `${label} must be a non-negative number`);
+      }
+    });
+  },
+  waitHidden(step, path, issues) {
+    validateLogicalKey(step.key, `${path}.key`, issues);
+
+    if (step.scopeKey !== undefined) {
+      validateLogicalKey(step.scopeKey, `${path}.scopeKey`, issues, { optional: true });
+    }
+
+    if (step.scrollerKey !== undefined) {
+      validateLogicalKey(step.scrollerKey, `${path}.scrollerKey`, issues, { optional: true });
+    }
+
+    if (step.presenceThreshold !== undefined && (typeof step.presenceThreshold !== "number" || !Number.isFinite(step.presenceThreshold) || step.presenceThreshold < 1)) {
+      pushIssue(issues, `${path}.presenceThreshold`, "presenceThreshold must be a number ≥ 1");
+    }
+
+    if (step.staleRetryCap !== undefined && (typeof step.staleRetryCap !== "number" || !Number.isFinite(step.staleRetryCap) || step.staleRetryCap < 0)) {
+      pushIssue(issues, `${path}.staleRetryCap`, "staleRetryCap must be a non-negative number");
+    }
+
+    const numericFields: Array<[keyof WaitHiddenStep, string]> = [
+      ["minOpacity", "minOpacity"],
+      ["minIntersectionRatio", "minIntersectionRatio"],
+      ["minBoundingBoxArea", "minBoundingBoxArea"]
+    ];
+
+    numericFields.forEach(([field, label]) => {
+      const value = step[field];
+      if (value !== undefined && (typeof value !== "number" || !Number.isFinite(value) || value < 0)) {
+        pushIssue(issues, `${path}.${label}`, `${label} must be a non-negative number`);
+      }
+    });
+  },
+  waitForIdle(step, path, issues) {
+    if (step.key !== undefined) {
+      validateLogicalKey(step.key, `${path}.key`, issues, { optional: true });
+    }
+
+    if (step.scopeKey !== undefined) {
+      validateLogicalKey(step.scopeKey, `${path}.scopeKey`, issues, { optional: true });
+    }
+
+    if (step.scrollerKey !== undefined) {
+      validateLogicalKey(step.scrollerKey, `${path}.scrollerKey`, issues, { optional: true });
+    }
+
+    if (step.presenceThreshold !== undefined && (typeof step.presenceThreshold !== "number" || !Number.isFinite(step.presenceThreshold) || step.presenceThreshold < 1)) {
+      pushIssue(issues, `${path}.presenceThreshold`, "presenceThreshold must be a number ≥ 1");
+    }
+
+    if (step.staleRetryCap !== undefined && (typeof step.staleRetryCap !== "number" || !Number.isFinite(step.staleRetryCap) || step.staleRetryCap < 0)) {
+      pushIssue(issues, `${path}.staleRetryCap`, "staleRetryCap must be a non-negative number");
+    }
+
+    const idleFields: Array<[string, unknown]> = [
+      ["idleMs", step.idleMs],
+      ["maxWindowMs", step.maxWindowMs],
+      ["heartbeatMs", step.heartbeatMs]
+    ];
+
+    idleFields.forEach(([label, value]) => {
+      if (value !== undefined && (typeof value !== "number" || !Number.isFinite(value) || value < 0)) {
+        pushIssue(issues, `${path}.${label}`, `${label} must be a non-negative number`);
+      }
+    });
   },
   delay(step, path, issues) {
     if (typeof step.ms !== "number" || !Number.isFinite(step.ms) || step.ms < 0) {

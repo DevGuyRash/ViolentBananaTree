@@ -7,6 +7,9 @@ import { createTypeHandler } from "./type";
 import { createSelectHandler } from "./select";
 import { createWaitForHandler } from "./waitFor";
 import { createWaitTextHandler } from "./waitText";
+import { createWaitVisibleHandler } from "./waitVisible";
+import { createWaitHiddenHandler } from "./waitHidden";
+import { createWaitForIdleHandler } from "./waitForIdle";
 import { createDelayHandler } from "./delay";
 import { createLogHandler } from "./log";
 import { createSetContextHandler } from "./setContext";
@@ -29,6 +32,9 @@ export function createActionHandlers(options: CreateActionHandlersOptions = {}):
     select: createSelectHandler(options),
     waitFor: createWaitForHandler(options),
     waitText: createWaitTextHandler(options),
+    waitVisible: createWaitVisibleHandler(options),
+    waitHidden: createWaitHiddenHandler(options),
+    waitForIdle: createWaitForIdleHandler(options),
     delay: createDelayHandler(options),
     log: createLogHandler(options),
     setContext: createSetContextHandler(options),
