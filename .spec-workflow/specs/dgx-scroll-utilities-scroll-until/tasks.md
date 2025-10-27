@@ -8,7 +8,7 @@
   - _Requirements: 1, 6_
   - _Prompt: Role: Senior TypeScript engineer specializing in DOM heuristics | Task: Implement container detection honoring DGX hints, ancestor overflow, and document fallbacks with telemetry instrumentation | Restrictions: Avoid direct window globals in tests, expose pure functions for unit coverage | Success: Detector returns container element, strategy history, and logs diagnostics when fallbacks occur_
 
-- [ ] 2. Add safe `scrollIntoView` controller
+- [x] 2. Add safe `scrollIntoView` controller
   - File: packages/core/utils/scroll/into-view.ts (new)
   - Calculate alignment offsets, apply safety insets for sticky headers, and verify viewport visibility before resolving.
   - Purpose: Provide consistent `scrollIntoView` behavior with overscroll protection.
