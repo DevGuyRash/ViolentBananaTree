@@ -16,7 +16,7 @@
   - _Requirements: 2, 5_
   - _Prompt: Role: Frontend systems engineer focused on scroll ergonomics | Task: Build into-view helper handling alignment options, safety margins, and bounded retries | Restrictions: Use requestAnimationFrame for smoothness, clamp offsets within container ranges | Success: Elements land fully within viewport, retries capped, telemetry logs adjustments_
 
-- [ ] 3. Build `scrollUntil` orchestrator core
+- [x] 3. Build `scrollUntil` orchestrator core
   - File: packages/core/utils/scroll/until.ts (new)
   - Implement loop managing attempts, timeouts, inter-step delays, and delta tracking across modes.
   - Purpose: Centralize iterative scroll logic with deterministic termination.
