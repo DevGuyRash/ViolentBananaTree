@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/dgx-scroll-utilities-scroll-until/tasks.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-10-27T08:45:00.000Z",
+      "trigger": "requested",
+      "approvalId": "approval_20251027T084500_dgx_scroll_utilities_tasks",
+      "approvalTitle": "dgx-scroll-utilities-scroll-until tasks approval"
+    }
+  ]
+}
