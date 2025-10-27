@@ -1,6 +1,6 @@
 # Tasks Document
 
-- [ ] 1. Implement scroll container detection heuristics
+- [x] 1. Implement scroll container detection heuristics
   - File: packages/core/utils/scroll/container.ts (new)
   - Build detection helpers that inspect ancestor overflow, DGX hint attributes, and workflow context fallbacks; return strategy metadata for telemetry.
   - Purpose: Satisfy automatic container detection with clear diagnostics.
