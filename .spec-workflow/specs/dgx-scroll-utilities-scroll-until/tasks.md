@@ -24,7 +24,7 @@
   - _Requirements: 3, 4, 5_
   - _Prompt: Role: Async orchestration specialist | Task: Develop scrollUntil engine that merges defaults, enforces budgets, and routes mode-specific predicates | Restrictions: No unbounded loops, respect ≤500px steps and ≤1000ms delays, expose structured results | Success: Engine handles success, timeout, and no-change status with accurate telemetry_
 
-- [ ] 4. Implement mode predicate registry and list growth observers
+- [x] 4. Implement mode predicate registry and list growth observers
   - File: packages/core/utils/scroll/predicates.ts (new)
   - Provide predicates for `end`, `element`, `list_growth`, and `predicate`, integrating selector resolver and mutation observers.
   - Purpose: Modularize stopping logic and support recorder-injected predicates.

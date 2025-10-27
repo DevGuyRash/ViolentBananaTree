@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "test": "tsx --test \"packages/workflows/src/__tests__/**/*.test.ts\""
+    "test": "tsx --test \"packages/workflows/src/__tests__/**/*.test.ts\"",
+    "test:core": "tsx --test \"packages/core/__tests__/**/*.test.ts\""
   },
   "devDependencies": {
     "@types/node": "^24.9.1",
