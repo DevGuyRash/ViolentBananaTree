@@ -32,7 +32,7 @@
   - _Requirements: 3, 5_
   - _Prompt: Role: Browser automation engineer with mutation observer expertise | Task: Create predicate registry covering all modes, including DOM stability measurement | Restrictions: Sanitize predicate errors, reuse mutation idle gate for list growth, expose typed outcomes | Success: Predicates report satisfied states, provide history snapshots, and clean up observers_
 
-- [ ] 5. Emit `[DGX]` scroll telemetry events
+- [x] 5. Emit `[DGX]` scroll telemetry events
   - File: packages/core/utils/scroll/telemetry.ts (new)
   - Format lifecycle events (`start`, `attempt`, `success`, `failure`, `no_change`) with sanitized payloads and severity mapping.
   - Purpose: Deliver observable scroll diagnostics to HUD and recorder timelines.
