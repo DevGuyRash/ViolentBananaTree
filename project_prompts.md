@@ -74,7 +74,7 @@ Specify the declarative workflow model (step kinds like click, type, select, wai
 
 ### 3.3 Utilities — Waiting & Loading
 
-Status: In-Progress
+Status: Done
 
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
@@ -83,6 +83,8 @@ Define spec for waits (waitFor by key/CSS/XPath/text, waitText, wait for visibil
 ```
 
 ### 3.4 Utilities — Scrolling & “Scroll Until …”
+
+Status: In-Progress
 
 ```markdown
 Using the spec-workflow droid, please accomplish the following:
