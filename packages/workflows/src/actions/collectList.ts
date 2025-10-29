@@ -5,11 +5,18 @@ import {
   normalizeWhitespace,
   safeTextContent,
   sanitizeEntry,
+  sanitizeForLogging,
   toContextUpdate,
   type ActionExecutionArgs,
   type ActionRuntimeOptions
 } from "./shared";
-import type { CollectListOptions, CollectListStep, StepResult, WorkflowStepHandler } from "../types";
+import type {
+  CollectListMapper,
+  CollectListOptions,
+  CollectListStep,
+  StepResult,
+  WorkflowStepHandler
+} from "../types";
 
 function extractAttrs(element: Element, attrs: string[] | undefined): Record<string, string | null> {
   if (!attrs || attrs.length === 0) {
@@ -81,6 +88,163 @@ function serializeItem(element: Element, options: CollectListOptions): unknown {
   }
 }
 
+function isDescendant(parent: Element, candidate: Element): boolean {
+  if (parent === candidate) {
+    return true;
+  }
+
+  const contains = (parent as { contains?: (node: Element | null) => boolean }).contains;
+  if (typeof contains === "function") {
+    return contains.call(parent, candidate);
+  }
+
+  let current: Element | null | undefined = candidate;
+
+  while (current) {
+    const next = (current as { parentElement?: Element | null }).parentElement;
+    if (!next) {
+      break;
+    }
+    if (next === parent) {
+      return true;
+    }
+    current = next;
+  }
+
+  return false;
+}
+
+function uniqueElements(elements: Element[]): Element[] {
+  const seen = new Set<Element>();
+  return elements.filter((element) => {
+    if (seen.has(element)) {
+      return false;
+    }
+    seen.add(element);
+    return true;
+  });
+}
+
+async function resolveItems(
+  args: ActionExecutionArgs<CollectListStep>,
+  parent: Element,
+  options: CollectListOptions
+): Promise<Element[]> {
+  const items: Element[] = [];
+
+  if (options.itemKey) {
+    const result = await args.resolveLogicalKey(options.itemKey);
+    const attempts = Array.isArray(result.attempts) ? result.attempts : [];
+    const prioritized: typeof attempts = [];
+
+    if (result.resolvedBy) {
+      const resolvedAttempt = attempts.find((attempt) => attempt.strategy === result.resolvedBy);
+      if (resolvedAttempt) {
+        prioritized.push(resolvedAttempt);
+      }
+    }
+
+    attempts.forEach((attempt) => {
+      if (!attempt.success) {
+        return;
+      }
+      if (prioritized.includes(attempt)) {
+        return;
+      }
+      prioritized.push(attempt);
+    });
+
+    prioritized
+      .map((attempt) => attempt.elements ?? [])
+      .flat()
+      .forEach((element) => {
+        if (element && isDescendant(parent, element)) {
+          items.push(element);
+        }
+      });
+
+    if (items.length === 0 && result.element && isDescendant(parent, result.element)) {
+      items.push(result.element);
+    }
+  }
+
+  if (items.length === 0 && options.itemCss && typeof parent.querySelectorAll === "function") {
+    try {
+      items.push(...Array.from(parent.querySelectorAll(options.itemCss)));
+    } catch {
+      // ignore selector errors and fall through to children fallback
+    }
+  }
+
+  if (items.length === 0) {
+    const { children } = parent as { children?: Iterable<Element> };
+    if (children) {
+      items.push(...Array.from(children));
+    }
+  }
+
+  return uniqueElements(items);
+}
+
+function resolveMapper(
+  step: CollectListStep,
+  args: ActionExecutionArgs<CollectListStep>
+): CollectListMapper | null {
+  if (typeof step.options.map === "function") {
+    return step.options.map;
+  }
+
+  if (!step.options.mapCtx) {
+    return null;
+  }
+
+  const candidate = args.context.get(step.options.mapCtx);
+
+  if (typeof candidate === "function") {
+    return candidate as CollectListMapper;
+  }
+
+  if (candidate && typeof candidate === "object" && typeof (candidate as { map?: unknown }).map === "function") {
+    const mapper = (candidate as { map: CollectListMapper }).map;
+    return mapper.bind(candidate) as CollectListMapper;
+  }
+
+  return null;
+}
+
+function mapValues(
+  items: Element[],
+  mapper: CollectListMapper | null,
+  options: CollectListOptions,
+  parent: Element,
+  args: ActionExecutionArgs<CollectListStep>
+): unknown[] {
+  return items.map((element, index) => {
+    if (mapper) {
+      try {
+        const mapped = mapper(element, {
+          index,
+          parent,
+          context: args.context
+        });
+
+        if (typeof mapped !== "undefined") {
+          return mapped;
+        }
+      } catch (error) {
+        throw StepError.fromUnknown(args.step, "unknown", error, {
+          data: {
+            stage: "collectList.map",
+            index
+          }
+        });
+      }
+    }
+
+    return serializeItem(element, options);
+  });
+}
+
 async function executeCollectList(
   args: ActionExecutionArgs<CollectListStep>,
   _runtime: ActionRuntimeOptions
@@ -99,19 +263,15 @@ async function executeCollectList(
     });
   }
 
-  let items: Element[] = [];
-
-  if (step.options.itemCss) {
-    items = Array.from(parent.querySelectorAll(step.options.itemCss));
-  } else {
-    items = Array.from(parent.children);
-  }
+  let items = await resolveItems(args, parent, step.options);
 
   if (typeof step.options.limit === "number" && step.options.limit > 0) {
     items = items.slice(0, step.options.limit);
   }
 
-  let values = items.map((item) => serializeItem(item, step.options));
+  const mapper = resolveMapper(step, args);
+
+  let values = mapValues(items, mapper, step.options, parent, args);
   values = dedupeValues(values, step.options.dedupe ?? false);
 
   const data = {
@@ -126,11 +286,13 @@ async function executeCollectList(
     ? [toContextUpdate(step.toCtx, values, undefined, false)]
     : undefined;
 
+  const sanitizedValues = sanitizeForLogging(values);
+
   return buildResult("success", {
     notes: step.name ?? "Collected list",
     contextUpdates: updates,
     data: {
-      values: sanitizeEntry(step.toCtx ?? "values", values, false),
+      values: sanitizeEntry(step.toCtx ?? "values", sanitizedValues, false),
       count: values.length
     }
   });
