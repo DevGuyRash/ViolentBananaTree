@@ -40,13 +40,14 @@
   - _Requirements: 6_
   - _Prompt: Role: Observability-focused engineer | Task: Implement telemetry adapter aligning with existing wait events and masking sensitive fields | Restrictions: Use consistent event names (`[DGX] scroll:*`), avoid leaking raw selector text | Success: Logs render in HUD timeline with run identifiers and sanitized metadata_
 
-- [ ] 6. Integrate scroll helpers with workflow engine
+- [x] 6. Integrate scroll helpers with workflow engine
   - File: packages/workflows/src/actions/scroll.ts (new) + packages/workflows/src/engine.ts (update)
   - Wire `scrollIntoView` and `scrollUntil` actions, honoring workflow configuration defaults and propagating structured errors.
   - Purpose: Expose scroll utilities to declarative workflows.
   - _Leverage: packages/workflows/src/actions/shared.ts, packages/core/utils/scroll_
   - _Requirements: 2, 3, 4, 5, 6_
   - _Prompt: Role: Workflow runtime engineer | Task: Register scroll actions, map DSL options to helper contracts, and forward telemetry to HUD | Restrictions: Maintain backward compatibility for existing scroll steps, ensure errors bubble with reason codes | Success: Workflows execute scroll steps deterministically with telemetry mirrored in HUD_
+  - Notes: Scroll action handlers now resolve containers, map DSL options to helpers, sanitize telemetry, and surface structured StepErrors; regression suite `npm run test` passes.
 
 - [ ] 7. Extend recorder capture and export metadata
   - File: packages/recorder/src/session.ts (update), packages/recorder/src/to-workflow.ts (update)
