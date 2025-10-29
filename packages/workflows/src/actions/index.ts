@@ -16,13 +16,15 @@ import { createSetContextHandler } from "./setContext";
 import { createCaptureHandler } from "./capture";
 import { createAssertHandler } from "./assert";
 import { createCollectListHandler } from "./collectList";
-import { createScrollUntilHandler } from "./scrollUntil";
+import { createScrollHandlers } from "./scroll";
 import { createRunHandler } from "./run";
 import type { ActionRuntimeOptions } from "./shared";
 
 export interface CreateActionHandlersOptions extends ActionRuntimeOptions {}
 
 export function createActionHandlers(options: CreateActionHandlersOptions = {}): WorkflowHandlers {
+  const scroll = createScrollHandlers(options);
+
   return {
     click: createClickHandler(options),
     hover: createHoverHandler(options),
@@ -41,7 +43,8 @@ export function createActionHandlers(options: CreateActionHandlersOptions = {}):
     capture: createCaptureHandler(options),
     assert: createAssertHandler(options),
     collectList: createCollectListHandler(options),
-    scrollUntil: createScrollUntilHandler(options),
+    scrollIntoView: scroll.scrollIntoView,
+    scrollUntil: scroll.scrollUntil,
     run: createRunHandler(options)
   } as WorkflowHandlers;
 }
