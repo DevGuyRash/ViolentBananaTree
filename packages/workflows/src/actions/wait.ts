@@ -31,7 +31,14 @@ import type { ResolveAttempt, ResolveResult } from "../../../core/resolve";
 import type { QueryRoot } from "../../../core/utils/dom";
 import type { SelectorTry } from "../../../selectors/types";
 import type { ActionExecutionArgs, ActionRuntimeOptions } from "./shared";
-import { maskValue, SENSITIVE_KEY_PATTERN } from "./shared";
+import {
+  maskValue,
+  SENSITIVE_KEY_PATTERN,
+  sanitizeForLogging,
+  sanitizeLogicalKey,
+  summarizeElement,
+  isDomElement
+} from "./shared";
 import { pushHudNotification } from "../../../menu/hud";
 import type { WorkflowStep } from "../types";
 import { StepError } from "../engine/errors";
@@ -885,54 +892,9 @@ function buildLogBase<TStep extends WorkflowStep>(args: ActionExecutionArgs<TSte
   } satisfies Record<string, unknown>;
 }
 
-function sanitizeForLogging(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map((entry) => sanitizeForLogging(entry));
-  }
-
-  if (isDomElement(value)) {
-    return summarizeElement(value);
-  }
-
-  if (value && typeof value === "object") {
-    const entries = value as Record<string, unknown>;
-    const output: Record<string, unknown> = {};
-
-    Object.entries(entries).forEach(([key, entry]) => {
-      if (key === "element" || key === "target") {
-        output[key] = summarizeElement(isDomElement(entry) ? (entry as Element) : null);
-        return;
-      }
-
-      if (SENSITIVE_KEY_PATTERN.test(key)) {
-        output[key] = maskValue(entry);
-        return;
-      }
-
-      output[key] = sanitizeForLogging(entry);
-    });
-
-    return output;
-  }
-
-  return value;
-}
-
 function getStepLogicalKey(step: WorkflowStep): string | undefined {
   const candidate = (step as { key?: unknown }).key;
   return typeof candidate === "string" && candidate.length > 0 ? candidate : undefined;
-}
-
-function sanitizeLogicalKey(value: string | null | undefined): string | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  if (SENSITIVE_KEY_PATTERN.test(value)) {
-    return maskValue(value) as string;
-  }
-
-  return value;
 }
 
 function cloneResolveResult(result: ResolveResult): ResolveResult {
@@ -1010,10 +972,6 @@ function isElementWithinScope(element: Element, scope: QueryRoot | null): boolea
   }
 
   return true;
-}
-
-function isDomElement(value: unknown): value is Element {
-  return typeof Element !== "undefined" && value instanceof Element;
 }
 
 function isWaitError(value: unknown): value is WaitError {
