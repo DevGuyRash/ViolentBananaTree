@@ -247,6 +247,14 @@ export type CaptureStep = StepMetadata & {
   redactKeys?: string[];
 };
 
+export interface CollectListMapperInfo {
+  index: number;
+  parent: Element;
+  context: WorkflowContext;
+}
+
+export type CollectListMapper = (element: Element, info: CollectListMapperInfo) => unknown;
+
 export interface CollectListOptions {
   parentKey: LogicalKey;
   itemKey?: LogicalKey;
@@ -255,6 +263,7 @@ export interface CollectListOptions {
   attrs?: string[];
   limit?: number;
   dedupe?: boolean | { by: "text" | "attr"; attr?: string };
+  map?: CollectListMapper;
   mapCtx?: ContextPath;
 }
 
@@ -264,18 +273,63 @@ export type CollectListStep = StepMetadata & {
   toCtx?: ContextPath;
 };
 
+export type ScrollAlignmentBlock = "start" | "center" | "end" | "nearest";
+export type ScrollAlignmentInline = "start" | "center" | "end" | "nearest";
+
+export interface ScrollIntoViewAlignment {
+  block?: ScrollAlignmentBlock;
+  inline?: ScrollAlignmentInline;
+}
+
+export interface ScrollIntoViewMargin {
+  top?: number;
+  right?: number;
+  bottom?: number;
+  left?: number;
+}
+
+export interface ScrollIntoViewOptions {
+  containerKey?: LogicalKey;
+  containerCss?: string;
+  containerXPath?: string;
+  margin?: number | ScrollIntoViewMargin;
+  alignment?: ScrollIntoViewAlignment;
+  maxRetries?: number;
+  fallbackKeys?: LogicalKey[];
+  detectionHints?: string[];
+}
+
+export type ScrollIntoViewStep = StepMetadata & {
+  kind: "scrollIntoView";
+  key: LogicalKey;
+  options?: ScrollIntoViewOptions;
+};
+
 export type ScrollUntilStopCondition =
-  | { kind: "end" }
-  | { kind: "element"; key?: LogicalKey; css?: string; xpath?: string }
-  | { kind: "listGrowth"; parentKey: LogicalKey; itemCss?: string; minDelta?: number }
-  | { kind: "predicate"; expression: TemplateString };
+  | { kind: "end"; thresholdPx?: number }
+  | { kind: "element"; key?: LogicalKey; css?: string; xpath?: string; requireVisible?: boolean }
+  | { kind: "listGrowth"; parentKey?: LogicalKey; itemKey?: LogicalKey; itemCss?: string; minDelta?: number }
+  | { kind: "predicate"; id?: string; expression?: TemplateString; ctxPath?: ContextPath };
 
 export interface ScrollUntilOptions {
   containerKey?: LogicalKey;
+  containerCss?: string;
+  containerXPath?: string;
+  containerFallbackKeys?: LogicalKey[];
+  anchorKey?: LogicalKey;
+  anchorCss?: string;
+  anchorXPath?: string;
   stepPx?: number;
   maxSteps?: number;
+  maxAttempts?: number;
   delayMs?: number;
   timeoutMs?: number;
+  minDeltaPx?: number;
+  telemetry?: {
+    includeAttempts?: boolean;
+    eventPrefix?: string;
+  };
+  metadata?: Record<string, unknown>;
   until: ScrollUntilStopCondition;
 }
 
@@ -355,6 +409,7 @@ export type WorkflowStep =
   | IfStep
   | CaptureStep
   | CollectListStep
+  | ScrollIntoViewStep
   | ScrollUntilStep
   | RunStep
   | RetryStep;
@@ -382,7 +437,17 @@ export interface WorkflowDefinition {
 }
 
 export interface StepErrorPayload {
-  reason: "resolver-miss" | "timeout" | "assertion-failed" | "context-miss" | "unknown" | "cancelled";
+  reason:
+    | "resolver-miss"
+    | "timeout"
+    | "assertion-failed"
+    | "context-miss"
+    | "unknown"
+    | "cancelled"
+    | "no_change"
+    | "predicate_error"
+    | "container_unavailable"
+    | "dom_stable_no_match";
   message: string;
   stepId?: string;
   stepKind?: WorkflowStepKind;
@@ -952,16 +1017,232 @@ const STEP_VALIDATORS: Record<string, StepValidator> = {
       validateLogicalKey(step.options.itemKey, `${path}.options.itemKey`, issues, { optional: true });
     }
   },
+  scrollIntoView(step, path, issues) {
+    validateLogicalKey(step.key, `${path}.key`, issues);
+
+    if (step.options === undefined) {
+      return;
+    }
+
+    if (!isRecord(step.options)) {
+      pushIssue(issues, `${path}.options`, "scrollIntoView options must be an object");
+      return;
+    }
+
+    if (step.options.containerKey !== undefined) {
+      validateLogicalKey(step.options.containerKey, `${path}.options.containerKey`, issues, { optional: true });
+    }
+
+    if (step.options.containerCss !== undefined && !isNonEmptyString(step.options.containerCss)) {
+      pushIssue(issues, `${path}.options.containerCss`, "containerCss must be a non-empty string");
+    }
+
+    if (step.options.containerXPath !== undefined && !isNonEmptyString(step.options.containerXPath)) {
+      pushIssue(issues, `${path}.options.containerXPath`, "containerXPath must be a non-empty string");
+    }
+
+    if (step.options.margin !== undefined) {
+      const margin = step.options.margin;
+      if (typeof margin === "number") {
+        if (!Number.isFinite(margin)) {
+          pushIssue(issues, `${path}.options.margin`, "margin must be a finite number");
+        }
+      } else if (isRecord(margin)) {
+        ["top", "right", "bottom", "left"].forEach((edge) => {
+          const value = (margin as Record<string, unknown>)[edge];
+          if (value !== undefined && (typeof value !== "number" || !Number.isFinite(value))) {
+            pushIssue(issues, `${path}.options.margin.${edge}`, "margin values must be finite numbers");
+          }
+        });
+      } else {
+        pushIssue(issues, `${path}.options.margin`, "margin must be a number or object with numeric edges");
+      }
+    }
+
+    if (step.options.alignment !== undefined) {
+      if (!isRecord(step.options.alignment)) {
+        pushIssue(issues, `${path}.options.alignment`, "alignment must be an object");
+      } else {
+        const allowed = new Set(["start", "center", "end", "nearest"]);
+        const block = step.options.alignment.block;
+        const inline = step.options.alignment.inline;
+
+        if (block !== undefined && (typeof block !== "string" || !allowed.has(block))) {
+          pushIssue(issues, `${path}.options.alignment.block`, "alignment.block must be start|center|end|nearest");
+        }
+
+        if (inline !== undefined && (typeof inline !== "string" || !allowed.has(inline))) {
+          pushIssue(issues, `${path}.options.alignment.inline`, "alignment.inline must be start|center|end|nearest");
+        }
+      }
+    }
+
+    if (step.options.maxRetries !== undefined && (typeof step.options.maxRetries !== "number" || !Number.isFinite(step.options.maxRetries) || step.options.maxRetries < 0)) {
+      pushIssue(issues, `${path}.options.maxRetries`, "maxRetries must be a non-negative number");
+    }
+
+    if (step.options.fallbackKeys !== undefined) {
+      if (!Array.isArray(step.options.fallbackKeys)) {
+        pushIssue(issues, `${path}.options.fallbackKeys`, "fallbackKeys must be an array of logical keys");
+      } else {
+        step.options.fallbackKeys.forEach((key, index) => {
+          validateLogicalKey(key, `${path}.options.fallbackKeys[${index}]`, issues, { optional: true });
+        });
+      }
+    }
+
+    if (step.options.detectionHints !== undefined) {
+      if (!Array.isArray(step.options.detectionHints)) {
+        pushIssue(issues, `${path}.options.detectionHints`, "detectionHints must be an array of strings");
+      } else {
+        step.options.detectionHints.forEach((hint, index) => {
+          if (!isNonEmptyString(hint)) {
+            pushIssue(issues, `${path}.options.detectionHints[${index}]`, "detectionHints entries must be non-empty strings");
+          }
+        });
+      }
+    }
+  },
   scrollUntil(step, path, issues) {
     if (!isRecord(step.options)) {
       pushIssue(issues, `${path}.options`, "scrollUntil requires options object");
       return;
     }
-    if (step.options.containerKey !== undefined) {
-      validateLogicalKey(step.options.containerKey, `${path}.options.containerKey`, issues, { optional: true });
+    const options = step.options as Record<string, unknown>;
+
+    if (options.containerKey !== undefined) {
+      validateLogicalKey(options.containerKey, `${path}.options.containerKey`, issues, { optional: true });
     }
-    if (!isRecord(step.options.until)) {
+
+    if (options.containerCss !== undefined && !isNonEmptyString(options.containerCss)) {
+      pushIssue(issues, `${path}.options.containerCss`, "containerCss must be a non-empty string");
+    }
+
+    if (options.containerXPath !== undefined && !isNonEmptyString(options.containerXPath)) {
+      pushIssue(issues, `${path}.options.containerXPath`, "containerXPath must be a non-empty string");
+    }
+
+    if (options.containerFallbackKeys !== undefined) {
+      if (!Array.isArray(options.containerFallbackKeys)) {
+        pushIssue(issues, `${path}.options.containerFallbackKeys`, "containerFallbackKeys must be an array");
+      } else {
+        (options.containerFallbackKeys as unknown[]).forEach((key, index) => {
+          validateLogicalKey(key, `${path}.options.containerFallbackKeys[${index}]`, issues, { optional: true });
+        });
+      }
+    }
+
+    if (options.anchorKey !== undefined) {
+      validateLogicalKey(options.anchorKey, `${path}.options.anchorKey`, issues, { optional: true });
+    }
+
+    if (options.anchorCss !== undefined && !isNonEmptyString(options.anchorCss)) {
+      pushIssue(issues, `${path}.options.anchorCss`, "anchorCss must be a non-empty string");
+    }
+
+    if (options.anchorXPath !== undefined && !isNonEmptyString(options.anchorXPath)) {
+      pushIssue(issues, `${path}.options.anchorXPath`, "anchorXPath must be a non-empty string");
+    }
+
+    const numericFields: Array<[string, number | undefined, string]> = [
+      ["stepPx", options.stepPx as number | undefined, "stepPx must be a finite number"],
+      ["maxSteps", options.maxSteps as number | undefined, "maxSteps must be a positive number"],
+      ["maxAttempts", options.maxAttempts as number | undefined, "maxAttempts must be a positive number"],
+      ["delayMs", options.delayMs as number | undefined, "delayMs must be a finite number"],
+      ["timeoutMs", options.timeoutMs as number | undefined, "timeoutMs must be a finite number"],
+      ["minDeltaPx", options.minDeltaPx as number | undefined, "minDeltaPx must be a non-negative number"]
+    ];
+
+    numericFields.forEach(([field, value, message]) => {
+      if (value === undefined) {
+        return;
+      }
+      if (typeof value !== "number" || !Number.isFinite(value) || (field === "minDeltaPx" ? value < 0 : value <= 0)) {
+        pushIssue(issues, `${path}.options.${field}`, message);
+      }
+    });
+
+    if (options.telemetry !== undefined) {
+      if (!isRecord(options.telemetry)) {
+        pushIssue(issues, `${path}.options.telemetry`, "telemetry must be an object");
+      } else {
+        const telemetry = options.telemetry as Record<string, unknown>;
+        if (telemetry.includeAttempts !== undefined && typeof telemetry.includeAttempts !== "boolean") {
+          pushIssue(issues, `${path}.options.telemetry.includeAttempts`, "includeAttempts must be boolean");
+        }
+        if (telemetry.eventPrefix !== undefined && !isNonEmptyString(telemetry.eventPrefix)) {
+          pushIssue(issues, `${path}.options.telemetry.eventPrefix`, "eventPrefix must be a non-empty string");
+        }
+      }
+    }
+
+    if (options.metadata !== undefined && !isRecord(options.metadata)) {
+      pushIssue(issues, `${path}.options.metadata`, "metadata must be an object if provided");
+    }
+
+    if (!isRecord(options.until)) {
       pushIssue(issues, `${path}.options.until`, "scrollUntil requires until condition");
+      return;
+    }
+
+    const until = options.until as Record<string, unknown>;
+
+    if (!isNonEmptyString(until.kind)) {
+      pushIssue(issues, `${path}.options.until.kind`, "until condition requires kind");
+      return;
+    }
+
+    switch (until.kind) {
+      case "end":
+        if (until.thresholdPx !== undefined && (typeof until.thresholdPx !== "number" || !Number.isFinite(until.thresholdPx))) {
+          pushIssue(issues, `${path}.options.until.thresholdPx`, "thresholdPx must be a finite number");
+        }
+        break;
+      case "element": {
+        const hasKey = validateLogicalKey(until.key, `${path}.options.until.key`, issues, { optional: true });
+        const hasCss = isNonEmptyString(until.css ?? undefined);
+        const hasXpath = isNonEmptyString(until.xpath ?? undefined);
+
+        if (!hasKey && !hasCss && !hasXpath) {
+          pushIssue(issues, `${path}.options.until`, "element condition requires key, css, or xpath");
+        }
+
+        if (until.requireVisible !== undefined && typeof until.requireVisible !== "boolean") {
+          pushIssue(issues, `${path}.options.until.requireVisible`, "requireVisible must be boolean");
+        }
+
+        break;
+      }
+      case "listGrowth": {
+        if (until.parentKey !== undefined) {
+          validateLogicalKey(until.parentKey, `${path}.options.until.parentKey`, issues, { optional: true });
+        }
+        if (until.itemKey !== undefined) {
+          validateLogicalKey(until.itemKey, `${path}.options.until.itemKey`, issues, { optional: true });
+        }
+        if (until.itemCss !== undefined && !isNonEmptyString(until.itemCss)) {
+          pushIssue(issues, `${path}.options.until.itemCss`, "itemCss must be a non-empty string");
+        }
+        if (until.minDelta !== undefined && (typeof until.minDelta !== "number" || !Number.isFinite(until.minDelta) || until.minDelta < 1)) {
+          pushIssue(issues, `${path}.options.until.minDelta`, "minDelta must be a number ≥ 1");
+        }
+        if (until.parentKey === undefined && until.itemKey === undefined && !isNonEmptyString(until.itemCss)) {
+          pushIssue(issues, `${path}.options.until`, "listGrowth requires parentKey, itemKey, or itemCss");
+        }
+        break;
+      }
+      case "predicate": {
+        const hasExpression = isNonEmptyString(until.expression ?? undefined);
+        const hasId = isNonEmptyString(until.id ?? undefined);
+        const hasCtx = isNonEmptyString(until.ctxPath ?? undefined);
+
+        if (!hasExpression && !hasId && !hasCtx) {
+          pushIssue(issues, `${path}.options.until`, "predicate condition requires expression, id, or ctxPath");
+        }
+        break;
+      }
+      default:
+        pushIssue(issues, `${path}.options.until.kind`, `unknown scrollUntil condition '${String(until.kind)}'`);
     }
   },
   run(step, path, issues) {

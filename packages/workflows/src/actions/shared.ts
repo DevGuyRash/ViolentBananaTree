@@ -1,5 +1,9 @@
 import { wait } from "../../../core/utils/wait";
 import type { ResolveResult } from "../../../core/resolve";
+import type { ScrollContainerDetector } from "../../../core/utils/scroll/container";
+import type { IntoViewScroller } from "../../../core/utils/scroll/into-view";
+import type { ScrollUntilDefaults } from "../../../core/utils/scroll/until";
+import type { ScrollTelemetryLogger, ScrollTelemetryNotifier } from "../../../core/utils/scroll/telemetry";
 import {
   WORKFLOW_DEFAULT_INTERVAL_MS,
   WORKFLOW_DEFAULT_TIMEOUT_MS,
@@ -19,8 +23,35 @@ export const SENSITIVE_KEY_PATTERN = /(password|secret|token|auth|cookie|session
 
 export type EnvironmentLookup = Record<string, string | undefined>;
 
+export interface ScrollTelemetryRuntimeOptions {
+  logger?: ScrollTelemetryLogger | null;
+  notify?: ScrollTelemetryNotifier;
+  includeAttempts?: boolean;
+  eventPrefix?: string;
+  maskSelectors?: boolean;
+}
+
+export interface ScrollRuntimeOptions {
+  containerDetector?: ScrollContainerDetector | null;
+  intoViewScroller?: IntoViewScroller | null;
+  defaults?: ScrollUntilDefaults;
+  telemetry?: ScrollTelemetryRuntimeOptions;
+  runIdFactory?: () => string;
+  predicateEvaluator?: (
+    expression: string,
+    context: {
+      attempt: number;
+      elapsedMs: number;
+      container: Element;
+      cumulativeDelta: { x: number; y: number };
+      metadata?: Record<string, unknown>;
+    }
+  ) => boolean | Promise<boolean>;
+}
+
 export interface ActionRuntimeOptions {
   environment?: EnvironmentLookup;
+  scroll?: ScrollRuntimeOptions;
 }
 
 export type ActionExecutionArgs<TStep extends WorkflowStep> = WorkflowStepExecutionArgs & {
@@ -262,6 +293,90 @@ export function withEnvironment(
     context: args.context,
     environment
   } satisfies TemplateRenderOptions;
+}
+
+export function isDomElement(value: unknown): value is Element {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  if (typeof Element !== "undefined") {
+    return value instanceof Element;
+  }
+
+  return (value as { nodeType?: number }).nodeType === 1;
+}
+
+export function summarizeElement(element: Element | null): Record<string, unknown> | null {
+  if (!element) {
+    return null;
+  }
+
+  const summary: Record<string, unknown> = {
+    tagName: typeof element.tagName === "string" ? element.tagName.toLowerCase() : undefined
+  } satisfies Record<string, unknown>;
+
+  if ("id" in element && typeof (element as HTMLElement).id === "string" && (element as HTMLElement).id.length > 0) {
+    summary.id = (element as HTMLElement).id;
+  }
+
+  if ("classList" in element) {
+    try {
+      const classes = Array.from((element as HTMLElement).classList ?? []).slice(0, 5);
+      if (classes.length > 0) {
+        summary.classes = classes;
+      }
+    } catch {
+      // ignore classList access issues
+    }
+  }
+
+  return summary;
+}
+
+export function sanitizeForLogging(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => sanitizeForLogging(entry));
+  }
+
+  if (isDomElement(value)) {
+    return summarizeElement(value);
+  }
+
+  if (value && typeof value === "object") {
+    const entries = value as Record<string, unknown>;
+    const output: Record<string, unknown> = {};
+
+    Object.entries(entries).forEach(([key, entry]) => {
+      if (key === "element" || key === "target") {
+        output[key] = sanitizeForLogging(isDomElement(entry) ? (entry as Element) : null);
+        return;
+      }
+
+      if (SENSITIVE_KEY_PATTERN.test(key)) {
+        output[key] = maskValue(entry);
+        return;
+      }
+
+      output[key] = sanitizeForLogging(entry);
+    });
+
+    return output;
+  }
+
+  return value;
+}
+
+export function sanitizeLogicalKey(value: string | null | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  if (SENSITIVE_KEY_PATTERN.test(value)) {
+    return maskValue(value) as string;
+  }
+
+  return value;
 }
 
 export function buildHandler<TStep extends WorkflowStep>(
