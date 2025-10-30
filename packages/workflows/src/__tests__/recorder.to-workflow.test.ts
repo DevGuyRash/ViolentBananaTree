@@ -2,10 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildScrollStep,
   buildWaitStep,
   exportRecorderWorkflowSteps,
+  type RecordedScrollExport,
   type RecordedWaitExport
 } from "../../../recorder/src/to-workflow";
+import { registerCaptureHooks } from "../../../core/utils/scroll/recording";
 
 test("buildWaitStep produces waitText with annotations and guidance", () => {
   const entry: RecordedWaitExport = {
@@ -122,4 +125,100 @@ test("exportRecorderWorkflowSteps preserves non-wait steps and aggregates annota
   assert.equal(logStep.kind, "log");
   assert.equal(result.waitAnnotations.length, 1);
   assert.equal(result.waitAnnotations[0]?.resolver.key, "********");
+  assert.equal(result.scrollAnnotations.length, 0);
+});
+
+test("buildScrollStep serializes scrollUntil metadata and annotations", () => {
+  const hooks = registerCaptureHooks({
+    stop: {
+      kind: "list-growth",
+      parentKey: "feed.container",
+      itemCss: ".feed-item",
+      minDelta: 2
+    },
+    container: {
+      strategy: "hint",
+      key: "feed.scroller",
+      fallbackKeys: ["feed.fallback"],
+      css: ".scroll-area",
+      anchorKey: "feed.anchor"
+    },
+    tuning: {
+      stepPx: 160,
+      timeoutMs: 4800,
+      delayMs: 200
+    },
+    notes: ["Captured feed scroll"]
+  });
+
+  hooks.addNote("Captured feed scroll");
+  hooks.setTelemetry({ runId: "scroll-run-42" });
+
+  const context = hooks.finalize();
+
+  const entry: RecordedScrollExport = {
+    kind: "scrollUntil",
+    context,
+    id: "scroll-1",
+    name: "Scroll feed",
+    description: "Scroll until feed grows",
+    tags: ["recorder", "scroll"],
+    debug: true,
+    options: {
+      telemetry: {
+        includeAttempts: true,
+        eventPrefix: "[DGX] recorder"
+      },
+      metadata: {
+        custom: "value"
+      }
+    },
+    metadata: {
+      extra: {
+        detail: "info"
+      }
+    },
+    annotations: {
+      extra: true
+    },
+    notes: ["Recorder adds extra note"]
+  } satisfies RecordedScrollExport;
+
+  const { step, annotations } = buildScrollStep(entry);
+
+  assert.equal(step.kind, "scrollUntil");
+  assert.equal(step.id, "scroll-1");
+  assert.equal(step.name, "Scroll feed");
+  assert.equal(step.description, "Scroll until feed grows");
+  assert.equal(step.debug, true);
+  assert.ok(step.tags?.includes("recorder"));
+  assert.equal(step.timeoutMs, 4800);
+  assert.equal(step.options.until.kind, "list-growth");
+  assert.equal(step.options.containerKey, "feed.scroller");
+  assert.equal(step.options.containerCss, "[***masked***]");
+  assert.equal(step.options.anchorKey, "feed.anchor");
+  assert.equal(step.options.telemetry?.includeAttempts, true);
+  assert.equal(step.options.telemetry?.eventPrefix, "[DGX] recorder");
+  assert.equal(step.options.metadata?.custom, "value");
+
+  const recorderMeta = step.options.metadata?.recorder as Record<string, unknown>;
+  assert.ok(recorderMeta);
+  const recorderScroll = recorderMeta.scroll as Record<string, unknown>;
+  assert.equal(recorderScroll?.mode, "list-growth");
+  const telemetryMeta = recorderMeta.telemetry as Record<string, unknown>;
+  assert.equal(telemetryMeta?.runId, "scroll-run-42");
+
+  assert.ok(step.annotations?.scroll);
+  assert.equal((step.annotations?.scroll as { mode: string }).mode, "list-growth");
+  assert.equal((step.annotations?.extra as boolean | undefined), true);
+
+  assert.equal(annotations?.mode, "list-growth");
+  assert.equal(annotations?.guidance[0], "Recorder scroll list growth");
+  assert.deepEqual(annotations?.notes, ["Captured feed scroll", "Recorder adds extra note"]);
+
+  const exported = exportRecorderWorkflowSteps([{ kind: "scroll", scroll: entry }]);
+  assert.equal(exported.steps.length, 1);
+  assert.equal(exported.waitAnnotations.length, 0);
+  assert.equal(exported.scrollAnnotations.length, 1);
+  assert.equal(exported.scrollAnnotations[0]?.mode, "list-growth");
 });

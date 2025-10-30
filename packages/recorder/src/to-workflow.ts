@@ -3,8 +3,17 @@ import {
   DEFAULT_WAIT_INTERVAL_MS,
   DEFAULT_WAIT_TIMEOUT_MS
 } from "../../core/utils/wait";
+import {
+  formatAnnotations as formatScrollAnnotations,
+  hydrateReplayContext,
+  type RecorderScrollAnnotation,
+  type RecorderScrollContext
+} from "../../core/utils/scroll/recording";
 import type { WaitActionKind } from "../../workflows/src/actions/wait";
 import type {
+  ScrollUntilOptions,
+  ScrollUntilStep,
+  ScrollUntilStopCondition,
   WaitForIdleStep,
   WaitForStep,
   WaitHiddenStep,
@@ -12,6 +21,7 @@ import type {
   WaitVisibleStep,
   WorkflowStep
 } from "../../workflows/src/types";
+import type { RecorderScrollCaptureResult } from "./session";
 
 const WAIT_TAG_BASE = "recorder:wait";
 
@@ -108,26 +118,48 @@ export interface WaitAnnotations {
   notes?: string[];
 }
 
+export interface RecordedScrollExport extends RecorderScrollCaptureResult {
+  kind: "scrollUntil";
+}
+
+export interface RecorderScrollExportResult {
+  step: ScrollUntilStep;
+  annotations?: RecorderScrollAnnotation;
+  context: RecorderScrollContext;
+}
+
 export interface RecorderWorkflowExportInputStep {
-  kind: "wait" | "passthrough";
+  kind: "wait" | "scroll" | "passthrough";
   wait?: RecordedWaitExport;
+  scroll?: RecordedScrollExport;
   step?: WorkflowStep;
 }
 
 export interface RecorderWorkflowExportResult {
   steps: WorkflowStep[];
   waitAnnotations: WaitAnnotations[];
+  scrollAnnotations: RecorderScrollAnnotation[];
 }
 
 export function exportRecorderWorkflowSteps(steps: RecorderWorkflowExportInputStep[]): RecorderWorkflowExportResult {
   const exported: WorkflowStep[] = [];
   const annotations: WaitAnnotations[] = [];
+  const scrollAnnotations: RecorderScrollAnnotation[] = [];
 
   steps.forEach((entry) => {
     if (entry.kind === "wait" && entry.wait) {
       const wait = buildWaitStep(entry.wait);
       exported.push(wait.step);
       annotations.push(wait.annotations);
+      return;
+    }
+
+    if (entry.kind === "scroll" && entry.scroll) {
+      const scroll = buildScrollStep(entry.scroll);
+      exported.push(scroll.step);
+      if (scroll.annotations) {
+        scrollAnnotations.push(scroll.annotations);
+      }
       return;
     }
 
@@ -138,7 +170,8 @@ export function exportRecorderWorkflowSteps(steps: RecorderWorkflowExportInputSt
 
   return {
     steps: exported,
-    waitAnnotations: annotations
+    waitAnnotations: annotations,
+    scrollAnnotations
   } satisfies RecorderWorkflowExportResult;
 }
 
@@ -168,6 +201,464 @@ export function buildWaitStep(entry: RecordedWaitExport): RecorderWaitExportResu
     step,
     annotations
   } satisfies RecorderWaitExportResult;
+}
+
+export function buildScrollStep(entry: RecordedScrollExport): RecorderScrollExportResult {
+  const baseContext = hydrateReplayContext(entry.context) ?? entry.context;
+  const context = mergeScrollNotes(baseContext, entry.notes);
+  const annotations = formatScrollAnnotations(context);
+  const options = buildScrollOptions(context, entry);
+  const step = createScrollStep(entry, options, annotations);
+
+  return {
+    step,
+    annotations,
+    context
+  } satisfies RecorderScrollExportResult;
+}
+
+function createScrollStep(
+  entry: RecordedScrollExport,
+  options: ScrollUntilOptions,
+  scrollAnnotations?: RecorderScrollAnnotation
+): ScrollUntilStep {
+  const step: ScrollUntilStep = {
+    kind: "scrollUntil",
+    options
+  } satisfies ScrollUntilStep;
+
+  if (entry.id) {
+    step.id = entry.id;
+  }
+
+  if (entry.name) {
+    step.name = entry.name;
+  }
+
+  if (entry.description) {
+    step.description = entry.description;
+  }
+
+  if (entry.tags && entry.tags.length > 0) {
+    step.tags = dedupeStrings(entry.tags);
+  }
+
+  if (typeof entry.debug === "boolean") {
+    step.debug = entry.debug;
+  }
+
+  if (typeof options.timeoutMs === "number" && Number.isFinite(options.timeoutMs)) {
+    step.timeoutMs = options.timeoutMs;
+  }
+
+  const annotations = composeScrollAnnotations(entry.annotations, scrollAnnotations);
+  if (annotations) {
+    step.annotations = annotations;
+  }
+
+  return step;
+}
+
+function composeScrollAnnotations(
+  base: Record<string, unknown> | undefined,
+  scrollAnnotation?: RecorderScrollAnnotation
+): Record<string, unknown> | undefined {
+  if (!scrollAnnotation && !base) {
+    return undefined;
+  }
+
+  const payload = base ? { ...base } : {} satisfies Record<string, unknown>;
+
+  if (scrollAnnotation) {
+    payload.scroll = scrollAnnotation;
+  }
+
+  return Object.keys(payload).length > 0 ? payload : undefined;
+}
+
+function mergeScrollNotes(context: RecorderScrollContext, notes?: string[]): RecorderScrollContext {
+  if (!Array.isArray(notes) || notes.length === 0) {
+    return context;
+  }
+
+  const merged = dedupeStrings([...(context.notes ?? []), ...notes]);
+
+  if (merged.length === 0) {
+    if (context.notes && context.notes.length > 0) {
+      const next = { ...context } satisfies RecorderScrollContext;
+      delete (next as { notes?: string[] }).notes;
+      return next;
+    }
+    return context;
+  }
+
+  if (!context.notes || !arraysEqual(context.notes, merged)) {
+    return {
+      ...context,
+      notes: merged
+    } satisfies RecorderScrollContext;
+  }
+
+  return context;
+}
+
+function buildScrollOptions(context: RecorderScrollContext, entry: RecordedScrollExport): ScrollUntilOptions {
+  const overrides = sanitizeScrollOverrides(entry.options);
+  const metadataOverride = overrides.metadata;
+  const telemetryOverride = overrides.telemetry;
+
+  const recorderMetadata: Record<string, unknown> = {
+    scroll: cloneMetadataValue(context)
+  } satisfies Record<string, unknown>;
+
+  if (context.telemetry?.runId) {
+    recorderMetadata.telemetry = {
+      runId: context.telemetry.runId
+    } satisfies Record<string, unknown>;
+  }
+
+  const metadata = mergeMetadataRecords(
+    { recorder: recorderMetadata },
+    entry.metadata,
+    metadataOverride
+  );
+
+  const base: Partial<ScrollUntilOptions> = {
+    until: context.stop,
+    containerKey: context.container?.key,
+    containerCss: context.container?.css,
+    containerXPath: context.container?.xpath,
+    containerFallbackKeys: context.container?.fallbackKeys,
+    anchorKey: context.container?.anchorKey,
+    anchorCss: context.container?.anchorCss,
+    anchorXPath: context.container?.anchorXPath,
+    stepPx: context.tuning?.stepPx,
+    maxAttempts: context.tuning?.maxAttempts,
+    delayMs: context.tuning?.delayMs,
+    timeoutMs: context.tuning?.timeoutMs,
+    minDeltaPx: context.tuning?.minDeltaPx,
+    telemetry: telemetryOverride
+  } satisfies Partial<ScrollUntilOptions>;
+
+  delete overrides.metadata;
+  delete overrides.telemetry;
+
+  const merged: Partial<ScrollUntilOptions> = {
+    ...base,
+    ...overrides
+  } satisfies Partial<ScrollUntilOptions>;
+
+  if (metadata) {
+    merged.metadata = metadata;
+  }
+
+  return pruneUndefinedScrollOptions(merged);
+}
+
+function sanitizeScrollOverrides(
+  input?: Partial<ScrollUntilOptions>
+): Partial<ScrollUntilOptions> & { metadata?: Record<string, unknown> } {
+  if (!input) {
+    return {};
+  }
+
+  const output: Partial<ScrollUntilOptions> & { metadata?: Record<string, unknown> } = {};
+
+  if (typeof input.containerKey === "string" && input.containerKey.length > 0) {
+    output.containerKey = input.containerKey;
+  }
+
+  if (Array.isArray(input.containerFallbackKeys) && input.containerFallbackKeys.length > 0) {
+    output.containerFallbackKeys = dedupeStrings(input.containerFallbackKeys.filter((value): value is string => typeof value === "string" && value.length > 0));
+  }
+
+  if (typeof input.containerCss === "string" && input.containerCss.length > 0) {
+    output.containerCss = maskValue(input.containerCss);
+  }
+
+  if (typeof input.containerXPath === "string" && input.containerXPath.length > 0) {
+    output.containerXPath = maskValue(input.containerXPath);
+  }
+
+  if (typeof input.anchorKey === "string" && input.anchorKey.length > 0) {
+    output.anchorKey = input.anchorKey;
+  }
+
+  if (typeof input.anchorCss === "string" && input.anchorCss.length > 0) {
+    output.anchorCss = maskValue(input.anchorCss);
+  }
+
+  if (typeof input.anchorXPath === "string" && input.anchorXPath.length > 0) {
+    output.anchorXPath = maskValue(input.anchorXPath);
+  }
+
+  if (typeof input.stepPx === "number" && Number.isFinite(input.stepPx)) {
+    output.stepPx = Math.max(0, Math.floor(input.stepPx));
+  }
+
+  if (typeof input.maxAttempts === "number" && Number.isFinite(input.maxAttempts)) {
+    output.maxAttempts = Math.max(0, Math.floor(input.maxAttempts));
+  } else if (typeof (input as { maxSteps?: number }).maxSteps === "number" && Number.isFinite((input as { maxSteps: number }).maxSteps)) {
+    output.maxAttempts = Math.max(0, Math.floor((input as { maxSteps: number }).maxSteps));
+  }
+
+  if (typeof input.delayMs === "number" && Number.isFinite(input.delayMs)) {
+    output.delayMs = Math.max(0, Math.floor(input.delayMs));
+  }
+
+  if (typeof input.timeoutMs === "number" && Number.isFinite(input.timeoutMs)) {
+    output.timeoutMs = Math.max(0, Math.floor(input.timeoutMs));
+  }
+
+  if (typeof input.minDeltaPx === "number" && Number.isFinite(input.minDeltaPx)) {
+    output.minDeltaPx = Math.max(0, Math.floor(input.minDeltaPx));
+  }
+
+  const telemetry = sanitizeTelemetryOptions(input.telemetry);
+  if (telemetry) {
+    output.telemetry = telemetry;
+  }
+
+  const metadata = sanitizeMetadataRecord(input.metadata);
+  if (metadata) {
+    output.metadata = metadata;
+  }
+
+  return output;
+}
+
+function sanitizeTelemetryOptions(
+  input: ScrollUntilOptions["telemetry"]
+): ScrollUntilOptions["telemetry"] | undefined {
+  if (!input) {
+    return undefined;
+  }
+
+  const output: NonNullable<ScrollUntilOptions["telemetry"]> = {};
+
+  if (typeof input.includeAttempts === "boolean") {
+    output.includeAttempts = input.includeAttempts;
+  }
+
+  if (typeof input.eventPrefix === "string" && input.eventPrefix.length > 0) {
+    output.eventPrefix = input.eventPrefix;
+  }
+
+  return Object.keys(output).length > 0 ? output : undefined;
+}
+
+function mergeMetadataRecords(
+  ...records: Array<Record<string, unknown> | undefined>
+): Record<string, unknown> | undefined {
+  let merged: Record<string, unknown> | undefined;
+
+  for (const record of records) {
+    if (!record) {
+      continue;
+    }
+
+    const sanitized = sanitizeMetadataRecord(record);
+    if (!sanitized) {
+      continue;
+    }
+
+    merged = deepMergeMetadata(merged, sanitized);
+  }
+
+  return merged;
+}
+
+function deepMergeMetadata(
+  target: Record<string, unknown> | undefined,
+  source: Record<string, unknown>
+): Record<string, unknown> {
+  if (!target) {
+    target = {};
+  }
+
+  Object.entries(source).forEach(([key, value]) => {
+    if (isPlainRecord(value) && isPlainRecord(target[key])) {
+      target[key] = deepMergeMetadata(target[key] as Record<string, unknown>, value);
+      return;
+    }
+
+    target[key] = cloneMetadataValue(value);
+  });
+
+  return target;
+}
+
+function sanitizeMetadataRecord(record?: Record<string, unknown>): Record<string, unknown> | undefined {
+  if (!record) {
+    return undefined;
+  }
+
+  const output: Record<string, unknown> = {};
+
+  Object.entries(record).forEach(([key, value]) => {
+    if (typeof value === "undefined" || value === null) {
+      return;
+    }
+
+    output[key] = sanitizeMetadataValue(key, value);
+  });
+
+  return Object.keys(output).length > 0 ? output : undefined;
+}
+
+function sanitizeMetadataValue(key: string, value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => sanitizeMetadataValue(key, entry));
+  }
+
+  if (isPlainRecord(value)) {
+    const output: Record<string, unknown> = {};
+    Object.entries(value).forEach(([childKey, childValue]) => {
+      if (typeof childValue === "undefined" || childValue === null) {
+        return;
+      }
+      output[childKey] = sanitizeMetadataValue(childKey, childValue);
+    });
+    return output;
+  }
+
+  if (typeof value === "function") {
+    return "[function]";
+  }
+
+  if (SENSITIVE_KEY_PATTERN.test(key)) {
+    return maskValue(value);
+  }
+
+  return value;
+}
+
+function cloneMetadataValue<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((entry) => cloneMetadataValue(entry)) as unknown as T;
+  }
+
+  if (isPlainRecord(value)) {
+    const output: Record<string, unknown> = {};
+    Object.entries(value as Record<string, unknown>).forEach(([key, entry]) => {
+      if (typeof entry === "undefined") {
+        return;
+      }
+      output[key] = cloneMetadataValue(entry);
+    });
+    return output as unknown as T;
+  }
+
+  return value;
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function pruneUndefinedScrollOptions(options: Partial<ScrollUntilOptions>): ScrollUntilOptions {
+  const until = (options.until ?? { kind: "end" }) as ScrollUntilStopCondition;
+  const result: ScrollUntilOptions = {
+    until
+  } satisfies ScrollUntilOptions;
+
+  if (typeof options.containerKey === "string" && options.containerKey.length > 0) {
+    result.containerKey = options.containerKey;
+  }
+
+  if (typeof options.containerCss === "string" && options.containerCss.length > 0) {
+    result.containerCss = options.containerCss;
+  }
+
+  if (typeof options.containerXPath === "string" && options.containerXPath.length > 0) {
+    result.containerXPath = options.containerXPath;
+  }
+
+  if (Array.isArray(options.containerFallbackKeys) && options.containerFallbackKeys.length > 0) {
+    result.containerFallbackKeys = dedupeStrings(options.containerFallbackKeys);
+  }
+
+  if (typeof options.anchorKey === "string" && options.anchorKey.length > 0) {
+    result.anchorKey = options.anchorKey;
+  }
+
+  if (typeof options.anchorCss === "string" && options.anchorCss.length > 0) {
+    result.anchorCss = options.anchorCss;
+  }
+
+  if (typeof options.anchorXPath === "string" && options.anchorXPath.length > 0) {
+    result.anchorXPath = options.anchorXPath;
+  }
+
+  if (typeof options.stepPx === "number" && Number.isFinite(options.stepPx)) {
+    result.stepPx = options.stepPx;
+  }
+
+  if (typeof options.maxAttempts === "number" && Number.isFinite(options.maxAttempts)) {
+    result.maxAttempts = options.maxAttempts;
+  }
+
+  if (typeof options.delayMs === "number" && Number.isFinite(options.delayMs)) {
+    result.delayMs = options.delayMs;
+  }
+
+  if (typeof options.timeoutMs === "number" && Number.isFinite(options.timeoutMs)) {
+    result.timeoutMs = options.timeoutMs;
+  }
+
+  if (typeof options.minDeltaPx === "number" && Number.isFinite(options.minDeltaPx)) {
+    result.minDeltaPx = options.minDeltaPx;
+  }
+
+  if (options.telemetry) {
+    result.telemetry = options.telemetry;
+  }
+
+  if (options.metadata) {
+    result.metadata = options.metadata;
+  }
+
+  return result;
+}
+
+function dedupeStrings(values: string[]): string[] {
+  const seen = new Set<string>();
+  const output: string[] = [];
+
+  for (const value of values) {
+    if (typeof value !== "string") {
+      continue;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed || seen.has(trimmed)) {
+      continue;
+    }
+
+    seen.add(trimmed);
+    output.push(trimmed);
+  }
+
+  return output;
+}
+
+function arraysEqual(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  for (let index = 0; index < a.length; index += 1) {
+    if (a[index] !== b[index]) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function createWaitStep(
